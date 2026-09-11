@@ -26,7 +26,21 @@ export function useVoiceConnection(request: RoomRequest, cursor: RefObject<numbe
   const connect = useCallback(
     (id: string) => {
       const pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          // Public demo TURN relay: without one, any pair behind a symmetric NAT
+          // or a firewall that blocks direct UDP (common on mobile/corporate
+          // networks) can never complete the connection over STUN alone.
+          {
+            urls: [
+              "turn:openrelay.metered.ca:80",
+              "turn:openrelay.metered.ca:443",
+              "turn:openrelay.metered.ca:443?transport=tcp",
+            ],
+            username: "openrelayproject",
+            credential: "openrelayproject",
+          },
+        ],
       });
       peers.current.set(id, pc);
       stream.current?.getTracks().forEach((t) => pc.addTrack(t, stream.current!));
@@ -48,8 +62,13 @@ export function useVoiceConnection(request: RoomRequest, cursor: RefObject<numbe
       };
       pc.onconnectionstatechange = () => {
         if (pc.connectionState === "connected") setVoiceStatus("Connected to voice");
-        if (pc.connectionState === "failed")
-          setVoiceStatus("Voice connection failed on this network");
+        if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+          setVoiceStatus("Reconnecting voice…");
+          pc.close();
+          if (peers.current.get(id) === pc) peers.current.delete(id);
+          audios.current.get(id)?.pause();
+          audios.current.delete(id);
+        }
       };
       return pc;
     },
