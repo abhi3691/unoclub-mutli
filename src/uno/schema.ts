@@ -19,6 +19,7 @@ export const roomActionSchema = z.object({
     .regex(/^[A-F0-9]{6}$/)
     .optional(),
   token: z.string().length(48).optional(),
+  uid: z.string().min(1).max(128).optional(),
   public: z.boolean().optional(),
   card: z.string().max(24).optional(),
   color: z.enum(["red", "yellow", "green", "blue"]).optional(),

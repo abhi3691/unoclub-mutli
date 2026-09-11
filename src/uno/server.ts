@@ -3,6 +3,7 @@ import type { Card, Color, Signal, Snapshot } from "./types";
 type Player = {
   id: string;
   token: string;
+  uid: string;
   name: string;
   hand: Card[];
   voice: boolean;
@@ -35,6 +36,7 @@ export type Input = {
   name?: string;
   code?: string;
   token?: string;
+  uid?: string;
   public?: boolean;
   card?: string;
   color?: Color;
@@ -180,11 +182,15 @@ export function unoAction(input: Input, store = rooms) {
   }
   if (!r) fail("Room not found. Check your six-character code.");
   if (["create", "quick", "join"].includes(input.action)) {
+    if (!input.uid) fail("Not signed in yet. Please try again in a moment.");
     if (r.phase !== "lobby") fail("This round has started. Join another table.");
     if (r.players.length >= 8) fail("This room is full (8 players).");
+    if (r.players.some((x) => x.uid === input.uid))
+      fail("You're already seated at this table.");
     const p: Player = {
       id: randomBytes(8).toString("hex"),
       token: randomBytes(24).toString("hex"),
+      uid: input.uid,
       name: input.name?.trim().slice(0, 20) || "Player",
       hand: [],
       voice: false,

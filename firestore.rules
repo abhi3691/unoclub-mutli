@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // All writes happen server-side via the Admin SDK (which bypasses these rules),
+    // after `unoAction` validates the move. Clients only ever read.
+    match /rooms/{code} {
+      allow read: if request.auth != null;
+      allow write: if false;
+
+      // A player's hand, readable only by that player.
+      match /hands/{uid} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if false;
+      }
+
+      // Undealt draw pile + action tokens: never exposed to any client.
+      match /secret/{doc} {
+        allow read, write: if false;
+      }
+    }
+  }
+}

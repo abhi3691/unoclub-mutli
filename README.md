@@ -4,16 +4,16 @@ Run `npm run dev -- --hostname 0.0.0.0` for development or `npm run build` follo
 
 ## Multiplayer hosting
 
-For Vercel, connect an Upstash Redis database and add these server-only environment variables to your Vercel project, then redeploy:
+Room state lives in Firestore. Create a Firebase project (Firestore Database + Anonymous Authentication enabled), then set these environment variables in Vercel (and locally in `.env`):
 
-- `UPSTASH_REDIS_REST_URL`
-- `UPSTASH_REDIS_REST_TOKEN`
+- `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID` — from Firebase Console → Project Settings → Your apps (safe to expose to the browser; access is controlled by Firestore Security Rules, not by hiding these).
+- `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` — a service account key from Project Settings → Service accounts → Generate new private key (server-only, never expose these).
 
-Use the read/write REST token, not the read-only token. Never prefix these with NEXT_PUBLIC. Choose a database region close to the Vercel function region. All players must use the same deployed site and database. No Redis credentials are included in this project.
+Deploy `firestore.rules` and `firestore.indexes.json` with `firebase deploy --only firestore` (requires `firebase login` once). A player's hand and the undealt draw pile are stored in access-restricted documents (per-player and server-only respectively) so no client can ever read another player's hand or see upcoming draws.
 
-Rooms are now stored in Redis with atomic compare-and-swap updates and 30-minute idle expiry. Public matchmaking is shared across instances. Local development without Redis continues to use memory. On Vercel, missing storage configuration produces a clear error instead of silently creating isolated rooms.
+Every mutation (play, draw, start, join, …) runs inside a Firestore transaction around the same pure `unoAction` rules engine, so concurrent moves from different players never corrupt room state. Clients subscribe to the room's public document and their own private hand document with `onSnapshot`, so every player sees updates the moment they're written — no polling, no WebSocket server to keep alive.
 
-The game uses native WebSockets where supported, with HTTP fallback and a 400 ms reconciliation heartbeat. Actual update latency includes network and database round trips. Revisions prevent stale snapshots from undoing newer moves; duplicate local button submissions are blocked. This does not eliminate cold starts or provide zero-latency delivery. At scale, use a managed realtime transport to reduce polling volume.
+For local development without a real Firebase project, run the Firestore + Auth emulators (`firebase emulators:start --only firestore,auth`, requires a JDK) and set `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080`, `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`, and `NEXT_PUBLIC_FIREBASE_EMULATOR=true`.
 
 ## Voice
 
@@ -31,12 +31,6 @@ With the app running: `node scripts/check-uno.mjs`. This verifies capacity, host
 
 ## Code structure and formatting
 
-`Uno.tsx` composes the page. `GameTable`, `RoomLobby`, `VoicePanel`, `GameDialog`, `GameHeader`, and `PlayingCard` own the UI. `useUnoGame` coordinates room state, `useVoiceConnection` handles WebRTC, `useRoomTransport` handles WebSocket/HTTP transport, and `useCardMotion` handles animation.
+`Uno.tsx` composes the page. `GameTable`, `RoomLobby`, `VoicePanel`, `GameDialog`, `GameHeader`, and `PlayingCard` own the UI. `useUnoGame` coordinates room state via Firestore realtime listeners, `useVoiceConnection` handles WebRTC voice signaling, and `useCardMotion` handles animation. `src/firebase/client.ts` and `src/firebase/admin.ts` hold the Firebase SDK setup; `src/uno/storage.ts` bridges the pure `unoAction` rules engine (`src/uno/server.ts`) to Firestore transactions.
 
 Run `npm run format` to format the project or `npm run format:check` to validate formatting.
-
-## WebSocket transport
-
-The client now sends authenticated game actions and voice signaling over a native WebSocket at `/api/uno/socket` when available. Other players on the same function instance receive immediate invalidation notifications. A 400 ms synchronization heartbeat reconciles changes across Vercel instances through Redis; Redis pub/sub fan-out is not yet implemented. Socket messages never broadcast another player's private hand. Disconnects reconnect with backoff; HTTP remains available while disconnected. Unconfirmed mutation requests are not automatically replayed.
-
-Vercel uses `@vercel/functions` experimental WebSocket upgrades with Fluid compute enabled. Configure Redis as above. Local `next dev` uses HTTP fallback; use Vercel CLI 54.14.2 or newer (`vercel dev`) to test the upgrade endpoint locally. Redeploy to activate the socket endpoint. Production socket behavior still needs verification against your deployed URL.
