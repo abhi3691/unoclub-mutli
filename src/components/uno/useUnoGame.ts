@@ -24,6 +24,8 @@ type PublicDoc = {
   turn: string;
   direction: number;
   winner: string | null;
+  standings: string[];
+  matchOver: boolean;
   log: string[];
 };
 type HandDoc = { hand: Card[]; signals: Snapshot["signals"] };
@@ -52,6 +54,8 @@ function toSnapshot(pub: PublicDoc, hand: HandDoc | null, selfId: string): Snaps
     turn: pub.turn,
     direction: pub.direction,
     winner: pub.winner,
+    standings: pub.standings ?? [],
+    matchOver: pub.matchOver ?? false,
     log: pub.log,
     signals: hand?.signals ?? [],
   };
@@ -163,6 +167,7 @@ export function useUnoGame() {
         sessionStorage.setItem("uno-session", JSON.stringify(session.current));
         publicPart.current = null;
         handPart.current = null;
+        cursor.current = 0;
         setSessionVersion((v) => v + 1);
       }
       // Apply the direct response immediately for snappy feedback; the Firestore
@@ -178,6 +183,7 @@ export function useUnoGame() {
         latest.current = null;
         publicPart.current = null;
         handPart.current = null;
+        cursor.current = 0;
         sessionStorage.removeItem("uno-session");
         setRoom(null);
         setSessionVersion((v) => v + 1);

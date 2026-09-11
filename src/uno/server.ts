@@ -24,11 +24,18 @@ export type Room = {
   turn: string;
   direction: number;
   winner: string | null;
+  standings: string[];
+  matchOver: boolean;
   log: string[];
   signals: Signal[];
   seq: number;
   updated: number;
 };
+/** Players still in the running for a placement — everyone not already ranked. */
+function activePlayers(r: Room): Player[] {
+  const ranked = r.standings ?? [];
+  return r.players.filter((p) => !ranked.includes(p.id));
+}
 const g = globalThis as typeof globalThis & { unoRooms?: Map<string, Room> };
 const rooms = (g.unoRooms ??= new Map<string, Room>());
 export type Input = {
@@ -97,10 +104,10 @@ function draw(r: Room, p: Player, n = 1) {
   }
 }
 function advance(r: Room, n = 1) {
-  const index = r.players.findIndex((p) => p.id === r.turn);
+  const active = activePlayers(r);
+  const index = active.findIndex((p) => p.id === r.turn);
   r.turn =
-    r.players[(index + n * r.direction + r.players.length * 10) % r.players.length]?.id ??
-    "";
+    active[(index + n * r.direction + active.length * 10) % active.length]?.id ?? "";
   r.drawnThisTurn = false;
 }
 function playable(r: Room, c: Card) {
@@ -134,6 +141,8 @@ function snapshot(r: Room, p: Player, after = 0): Snapshot {
     turn: r.turn,
     direction: r.direction,
     winner: r.winner,
+    standings: r.standings ?? [],
+    matchOver: r.matchOver ?? false,
     log: r.log,
     signals: r.signals.filter((s) => s.to === p.id && s.id > after),
   };
@@ -172,6 +181,8 @@ export function unoAction(input: Input, store = rooms) {
         turn: "",
         direction: 1,
         winner: null,
+        standings: [],
+        matchOver: false,
         log: [],
         signals: [],
         seq: 0,
@@ -226,17 +237,25 @@ export function unoAction(input: Input, store = rooms) {
   if (input.action === "start") {
     if (p.id !== r.host) fail("Only the host can deal.");
     if (r.phase === "playing") fail("A round is already in progress.");
-    if (r.players.length < 2) fail("Invite at least one more player.");
+    // A finished round with standings still open (not skipped, not everyone
+    // ranked yet) continues the match: only the still-unranked players are
+    // dealt back in to decide the remaining placements. Anything else — the
+    // lobby, or a match that finished/was skipped — starts a fresh match.
+    const continuing = r.phase === "finished" && !r.matchOver && r.standings.length > 0;
+    if (!continuing) {
+      r.standings = [];
+      r.matchOver = false;
+    }
+    const active = continuing ? activePlayers(r) : r.players;
+    if (active.length < 2) fail("Invite at least one more player.");
     r.pendingDraw = 0;
     r.drawnThisTurn = false;
     r.deck = deck();
     r.discard = [];
     r.direction = 1;
     r.winner = null;
-    for (const x of r.players) {
-      x.hand = [];
-      draw(r, x, 7);
-    }
+    for (const x of r.players) x.hand = [];
+    for (const x of active) draw(r, x, 7);
     // Only a Wild or Wild +4 is invalid as the opening card and gets redrawn;
     // every other card keeps its usual effect on who plays first (below).
     let top = r.deck.pop()!;
@@ -246,20 +265,31 @@ export function unoAction(input: Input, store = rooms) {
     }
     r.discard = [top];
     r.color = top.color as Color;
-    r.turn = r.players[0].id;
+    r.turn = active[0].id;
     r.phase = "playing";
-    log(r, "Cards dealt. Let’s play!");
+    log(
+      r,
+      continuing
+        ? `Next round dealt for ${active.map((x) => x.name).join(", ")}!`
+        : "Cards dealt. Let’s play!",
+    );
     if (top.value === "skip") {
-      log(r, `Opening skip: ${r.players[0].name} loses their turn`);
+      log(r, `Opening skip: ${active[0].name} loses their turn`);
       advance(r);
     } else if (top.value === "reverse") {
       r.direction = -1;
       log(r, "Opening reverse: play starts in the other direction");
     } else if (top.value === "+2") {
-      draw(r, r.players[0], 2);
-      log(r, `Opening +2: ${r.players[0].name} draws 2 and is skipped`);
+      draw(r, active[0], 2);
+      log(r, `Opening +2: ${active[0].name} draws 2 and is skipped`);
       advance(r);
     }
+  }
+  if (input.action === "skipRanking") {
+    if (p.id !== r.host) fail("Only the host can skip.");
+    if (r.phase !== "finished" || r.matchOver) fail("Nothing to skip right now.");
+    r.matchOver = true;
+    log(r, "Ranking skipped — standings are final.");
   }
   if (input.action === "pass") {
     if (r.phase !== "playing" || r.turn !== p.id) fail("Wait for your turn.");
@@ -313,12 +343,26 @@ export function unoAction(input: Input, store = rooms) {
       if (c.value === "+2" || c.value === "+4") {
         r.pendingDraw = (r.pendingDraw || 0) + (c.value === "+2" ? 2 : 4);
         log(r, `Draw penalty: ${r.pendingDraw} cards. Stack ${c.value} or draw.`);
-      } else if (c.value === "skip" || (c.value === "reverse" && r.players.length === 2))
+      } else if (c.value === "skip" || (c.value === "reverse" && activePlayers(r).length === 2))
         advance(r);
       if (!p.hand.length) {
+        r.standings = [...r.standings, p.id];
+        const remaining = r.players.filter((x) => !r.standings.includes(x.id));
         r.phase = "finished";
         r.winner = p.id;
-        log(r, `${p.name} won the round!`);
+        if (remaining.length <= 1) {
+          if (remaining.length === 1) r.standings.push(remaining[0].id);
+          r.matchOver = true;
+          log(r, `${p.name} takes place #${r.standings.indexOf(p.id) + 1}. Standings are final!`);
+        } else {
+          r.matchOver = false;
+          log(
+            r,
+            `${p.name} takes place #${r.standings.length}! ${remaining
+              .map((x) => x.name)
+              .join(" & ")} play on for the rest.`,
+          );
+        }
       }
     }
   }
@@ -334,6 +378,8 @@ export function unoAction(input: Input, store = rooms) {
   if (r.phase === "playing" && r.players.length === 1) {
     r.phase = "finished";
     r.winner = r.players[0].id;
+    if (!r.standings.includes(r.players[0].id)) r.standings = [...r.standings, r.players[0].id];
+    r.matchOver = true;
   }
   return { snapshot: snapshot(r, p, input.after) };
 }

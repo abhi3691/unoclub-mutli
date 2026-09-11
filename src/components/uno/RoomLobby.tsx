@@ -132,18 +132,32 @@ export function RoomLobby({
           </button>
           <div className="member-count">{room.players.length}/8 players seated</div>
           {room.host === room.self && room.phase !== "playing" ? (
-            <button
-              className="primary"
-              disabled={busy || room.players.length < 2}
-              onClick={() => act("start")}
-            >
-              {room.phase === "finished" ? "Play again" : "Deal the cards"} <span>↗</span>
-            </button>
+            <>
+              <button
+                className="primary"
+                disabled={busy || room.players.length < 2}
+                onClick={() => act("start")}
+              >
+                {room.phase === "finished"
+                  ? room.matchOver
+                    ? "Play again"
+                    : "Deal next round"
+                  : "Deal the cards"}{" "}
+                <span>↗</span>
+              </button>
+              {room.phase === "finished" && !room.matchOver && (
+                <button className="skip" disabled={busy} onClick={() => act("skipRanking")}>
+                  Skip ranking &amp; end game
+                </button>
+              )}
+            </>
           ) : (
             <p className="helper">
               {room.phase === "lobby"
                 ? "The host will start when everyone is ready."
-                : "Match the active color or the top card’s symbol."}
+                : room.phase === "finished" && !room.matchOver
+                  ? "Waiting for the host to deal the next round, or skip ranking."
+                  : "Match the active color or the top card’s symbol."}
             </p>
           )}
           <button className="leave" onClick={() => act("leave")} disabled={busy}>

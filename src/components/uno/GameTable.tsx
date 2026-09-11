@@ -105,7 +105,9 @@ export function GameTable({
         </div>
         <div className="table-message" role="status" aria-live="polite">
           {room?.phase === "finished"
-            ? `${room.players.find((p) => p.id === room.winner)?.name} wins the round!`
+            ? room.matchOver
+              ? "Final standings are in!"
+              : `${room.players.find((p) => p.id === room.winner)?.name} takes place #${room.standings.length}!`
             : room?.phase === "playing"
               ? mine
                 ? room.pendingDraw
@@ -118,6 +120,25 @@ export function GameTable({
                 ? `${room.players.length} of 8 seats filled · Waiting for the host to deal`
                 : "The next great game night starts here."}
         </div>
+        {room?.phase === "finished" && room.standings.length > 0 && (
+          <div className="standings" role="status" aria-live="polite">
+            <strong>{room.matchOver ? "Final standings" : "Standings so far"}</strong>
+            <ol>
+              {room.standings.map((id) => (
+                <li key={id}>{room.players.find((x) => x.id === id)?.name ?? "Player left"}</li>
+              ))}
+            </ol>
+            {!room.matchOver && (
+              <p>
+                {room.players
+                  .filter((x) => !room.standings.includes(x.id))
+                  .map((x) => x.name)
+                  .join(" & ")}{" "}
+                play next for the remaining places.
+              </p>
+            )}
+          </div>
+        )}
         {room?.phase === "playing" && room.log[0] && (
           <p className="table-toast" role="status" aria-live="polite">
             {room.log.slice(0, 2).reverse().join(" · ")}

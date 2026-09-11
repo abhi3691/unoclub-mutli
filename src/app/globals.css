@@ -365,6 +365,35 @@ h1 {
   padding: 8px 18px;
   border-radius: 20px;
 }
+.standings {
+  text-align: center;
+  font-size: 11px;
+  color: #e7f1de;
+  background: #193c2b66;
+  width: fit-content;
+  max-width: calc(100% - 30px);
+  margin: 8px auto 0;
+  padding: 10px 18px;
+  border-radius: 14px;
+}
+.standings strong {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: #c1d1bd;
+  margin-bottom: 4px;
+}
+.standings ol {
+  margin: 0;
+  padding: 0 0 0 18px;
+  text-align: left;
+  display: inline-block;
+}
+.standings p {
+  margin: 6px 0 0;
+  font-size: 10px;
+  color: #a9c0ac;
+}
 .table-toast {
   text-align: center;
   font-size: 11px;
@@ -696,6 +725,16 @@ h3 {
   font-size: 12px;
   margin-top: 18px;
 }
+.skip {
+  width: 100%;
+  border: 1px solid #dce0d4;
+  background: none;
+  color: #7c837b;
+  font-size: 12px;
+  border-radius: 7px;
+  padding: 11px;
+  margin-top: 10px;
+}
 .notice {
   background: #fff2dd;
   padding: 10px;
@@ -949,6 +988,7 @@ input,
 .your-seat strong,
 .table-message,
 .leave,
+.skip,
 .join-row button,
 .mute {
   font-size: 14px;
@@ -1087,6 +1127,7 @@ a {
   .primary,
   .join-row button,
   .leave,
+  .skip,
   .mute {
     min-height: 48px;
   }

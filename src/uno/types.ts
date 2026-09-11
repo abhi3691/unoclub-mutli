@@ -28,6 +28,8 @@ export type Snapshot = {
   turn: string;
   direction: number;
   winner: string | null;
+  standings: string[];
+  matchOver: boolean;
   log: string[];
   signals: Signal[];
 };
