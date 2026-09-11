@@ -154,18 +154,33 @@ export function useUnoGame() {
 
   // Keep this seat alive on the server (it prunes anyone idle for 90s) even
   // while just waiting out someone else's turn, and give every client a
-  // periodic resync in case a realtime update was ever missed — the game
-  // otherwise looks stuck until a manual refresh.
+  // resync in case a realtime update was ever missed — the game otherwise
+  // looks stuck until a manual refresh. A backgrounded tab (e.g. a phone
+  // screen that dimmed while waiting for your turn) can have its interval
+  // timers and its Firestore listen stream both throttled or stalled by the
+  // browser, so on top of the periodic ping, force an immediate resync the
+  // moment the tab regains focus/visibility — the same thing a manual
+  // refresh would give you, without needing the reload.
   useEffect(() => {
     if (!session.current) return;
-    const interval = setInterval(() => {
+    const ping = () => {
       void request("ping")
         .then((data) => {
           if (data.snapshot) apply(data.snapshot);
         })
         .catch(() => {});
-    }, 30000);
-    return () => clearInterval(interval);
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") ping();
+    };
+    const interval = setInterval(ping, 30000);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", ping);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", ping);
+    };
   }, [sessionVersion, request, apply]);
 
   useEffect(() => () => stopVoice(), [stopVoice]);
