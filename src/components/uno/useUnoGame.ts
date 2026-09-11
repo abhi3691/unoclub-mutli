@@ -152,6 +152,22 @@ export function useUnoGame() {
     };
   }, [sessionVersion, remerge]);
 
+  // Keep this seat alive on the server (it prunes anyone idle for 90s) even
+  // while just waiting out someone else's turn, and give every client a
+  // periodic resync in case a realtime update was ever missed — the game
+  // otherwise looks stuck until a manual refresh.
+  useEffect(() => {
+    if (!session.current) return;
+    const interval = setInterval(() => {
+      void request("ping")
+        .then((data) => {
+          if (data.snapshot) apply(data.snapshot);
+        })
+        .catch(() => {});
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [sessionVersion, request, apply]);
+
   useEffect(() => () => stopVoice(), [stopVoice]);
 
   async function act(action: string, extra: Record<string, unknown> = {}) {

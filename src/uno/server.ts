@@ -226,6 +226,13 @@ export function unoAction(input: Input, store = rooms) {
       if (r.host === absent.id) r.host = r.players[0]?.id ?? "";
       log(r, `${absent.name} disconnected`);
     }
+  if (input.action === "ping") {
+    // No-op: reaching here already refreshed `seen` and ran the stale-player
+    // sweep above, and we always return a fresh snapshot below. Lets an idle
+    // player (e.g. waiting out someone else's long turn) avoid being pruned
+    // as disconnected, and gives every client a periodic resync as a
+    // safety net if a realtime update is ever missed.
+  }
   if (input.action === "leave") {
     if (r.turn === p.id) advance(r);
     r.players = r.players.filter((x) => x !== p);
