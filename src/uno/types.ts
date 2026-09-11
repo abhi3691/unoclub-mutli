@@ -9,6 +9,7 @@ export type Signal = {
 export type Snapshot = {
   revision: number;
   pendingDraw: number;
+  drawnThisTurn: boolean;
   code: string;
   self: string;
   host: string;

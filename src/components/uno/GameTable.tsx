@@ -86,7 +86,7 @@ export function GameTable({
             <PlayingCard
               back
               onClick={() => room && act("draw")}
-              disabled={!mine || busy}
+              disabled={!mine || busy || !!room?.drawnThisTurn}
             />
             <small>
               {room?.pendingDraw ? `DRAW ${room.pendingDraw} CARDS` : "DRAW PILE"}
@@ -110,12 +110,19 @@ export function GameTable({
               ? mine
                 ? room.pendingDraw
                   ? `Stack a ${room.top?.value} or draw ${room.pendingDraw} cards.`
-                  : "Your turn. Make it a good one."
+                  : room.drawnThisTurn
+                    ? "You drew a card. Play it, or pass."
+                    : "Your turn. Make it a good one."
                 : `${current?.name} is thinking…`
               : room
                 ? `${room.players.length} of 8 seats filled · Waiting for the host to deal`
                 : "The next great game night starts here."}
         </div>
+        {room?.phase === "playing" && room.log[0] && (
+          <p className="table-toast" role="status" aria-live="polite">
+            {room.log.slice(0, 2).reverse().join(" · ")}
+          </p>
+        )}
         <div
           aria-label="Your cards; swipe to see more"
           className={`hand ${room ? "real-hand" : ""}`}
@@ -156,13 +163,18 @@ export function GameTable({
               UNO! {uno ? "✓" : ""}
             </button>
           )}
-          {room?.phase === "playing" && (
+          {room?.phase === "playing" && !room.drawnThisTurn && (
             <button
               className="mobile-draw"
               disabled={!mine || busy}
               onClick={() => act("draw")}
             >
               {room?.pendingDraw ? `Draw ${room.pendingDraw} cards` : "Draw card"}
+            </button>
+          )}
+          {room?.phase === "playing" && room.drawnThisTurn && (
+            <button className="mobile-draw" disabled={!mine || busy} onClick={() => act("pass")}>
+              Pass
             </button>
           )}
         </div>

@@ -365,6 +365,17 @@ h1 {
   padding: 8px 18px;
   border-radius: 20px;
 }
+.table-toast {
+  text-align: center;
+  font-size: 11px;
+  color: #f4e7b4;
+  background: #6b4a1866;
+  width: fit-content;
+  max-width: calc(100% - 30px);
+  margin: 8px auto 0;
+  padding: 6px 16px;
+  border-radius: 20px;
+}
 .hand {
   display: flex;
   justify-content: center;

@@ -63,12 +63,15 @@ export function useRoomTransport(
         }
       };
       ws.onerror = () => ws.close();
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         if (socket.current === ws) socket.current = null;
         socketSession.current = null;
         rejectPending();
         if (!stopped) {
-          retry = setTimeout(connect, delay);
+          // Code 4000 is our own routine recycle (ahead of the host's function time
+          // limit), not a failure, so reconnect immediately instead of backing off.
+          const nextDelay = event.code === 4000 ? 250 : delay;
+          retry = setTimeout(connect, nextDelay);
           delay = Math.min(delay * 2, 30000);
         }
       };

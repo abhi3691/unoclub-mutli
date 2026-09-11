@@ -11,6 +11,7 @@ type Player = {
 export type Room = {
   revision?: number;
   pendingDraw: number;
+  drawnThisTurn: boolean;
   code: string;
   host: string;
   public: boolean;
@@ -98,6 +99,11 @@ function advance(r: Room, n = 1) {
   r.turn =
     r.players[(index + n * r.direction + r.players.length * 10) % r.players.length]?.id ??
     "";
+  r.drawnThisTurn = false;
+}
+function playable(r: Room, c: Card) {
+  const top = r.discard.at(-1);
+  return c.color === "wild" || c.color === r.color || (!!top && c.value === top.value);
 }
 function log(r: Room, s: string) {
   r.log = [s, ...r.log].slice(0, 15);
@@ -107,6 +113,7 @@ function snapshot(r: Room, p: Player, after = 0): Snapshot {
   return {
     revision: r.revision,
     pendingDraw: r.pendingDraw ?? 0,
+    drawnThisTurn: r.turn === p.id && r.drawnThisTurn,
     code: r.code,
     self: p.id,
     host: r.host,
@@ -151,6 +158,7 @@ export function unoAction(input: Input, store = rooms) {
       } while (rooms.has(code));
       r = {
         pendingDraw: 0,
+        drawnThisTurn: false,
         code,
         host: "",
         public: input.action === "quick" || !!input.public,
@@ -214,6 +222,7 @@ export function unoAction(input: Input, store = rooms) {
     if (r.phase === "playing") fail("A round is already in progress.");
     if (r.players.length < 2) fail("Invite at least one more player.");
     r.pendingDraw = 0;
+    r.drawnThisTurn = false;
     r.deck = deck();
     r.discard = [];
     r.direction = 1;
@@ -233,14 +242,34 @@ export function unoAction(input: Input, store = rooms) {
     r.phase = "playing";
     log(r, "Cards dealt. Let’s play!");
   }
+  if (input.action === "pass") {
+    if (r.phase !== "playing" || r.turn !== p.id) fail("Wait for your turn.");
+    if (!r.drawnThisTurn) fail("Draw a card before passing.");
+    log(r, `${p.name} passed`);
+    advance(r);
+  }
   if (input.action === "play" || input.action === "draw") {
     if (r.phase !== "playing" || r.turn !== p.id) fail("Wait for your turn.");
     if (input.action === "draw") {
-      const count = r.pendingDraw || 1;
-      draw(r, p, count);
-      r.pendingDraw = 0;
-      log(r, `${p.name} drew ${count} ${count === 1 ? "card" : "cards"}`);
-      advance(r);
+      if (r.pendingDraw) {
+        const count = r.pendingDraw;
+        draw(r, p, count);
+        r.pendingDraw = 0;
+        log(r, `${p.name} drew ${count} ${count === 1 ? "card" : "cards"}`);
+        advance(r);
+      } else {
+        if (r.drawnThisTurn) fail("You already drew. Play your card or pass.");
+        const before = p.hand.length;
+        draw(r, p, 1);
+        const c = p.hand.length > before ? p.hand.at(-1)! : null;
+        if (c && playable(r, c)) {
+          r.drawnThisTurn = true;
+          log(r, `${p.name} drew a card and can play it`);
+        } else {
+          log(r, `${p.name} drew a card and missed their turn`);
+          advance(r);
+        }
+      }
     } else {
       const c = p.hand.find((x) => x.id === input.card);
       if (!c) fail("That card is not in your hand.");

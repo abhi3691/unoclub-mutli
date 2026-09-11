@@ -50,6 +50,8 @@ export function useUnoGame() {
         if (!s) return;
         apply(s);
         await syncVoice(s);
+        // A prior connection hiccup has since recovered; clear the stale banner.
+        setError("");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Connection interrupted");
       } finally {

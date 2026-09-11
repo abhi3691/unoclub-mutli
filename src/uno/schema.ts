@@ -9,6 +9,7 @@ export const roomActionSchema = z.object({
     "leave",
     "play",
     "draw",
+    "pass",
     "voice",
     "signal",
   ]),
