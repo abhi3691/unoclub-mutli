@@ -1,7 +1,7 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import type { Card, Color, Signal, Snapshot } from './types';
 type Player = { id: string; token: string; name: string; hand: Card[]; voice: boolean; seen: number };
-type Room = { pendingDraw: number; code: string; host: string; public: boolean; phase: Snapshot['phase']; players: Player[]; deck: Card[]; discard: Card[]; color: Color; turn: string; direction: number; winner: string | null; log: string[]; signals: Signal[]; seq: number; updated: number };
+export type Room = { revision?: number; pendingDraw: number; code: string; host: string; public: boolean; phase: Snapshot['phase']; players: Player[]; deck: Card[]; discard: Card[]; color: Color; turn: string; direction: number; winner: string | null; log: string[]; signals: Signal[]; seq: number; updated: number };
 const g = globalThis as typeof globalThis & { unoRooms?: Map<string, Room> };
 const rooms = g.unoRooms ??= new Map<string, Room>();
 export type Input = { action: string; name?: string; code?: string; token?: string; public?: boolean; card?: string; color?: Color; uno?: boolean; voice?: boolean; after?: number; to?: string; data?: Signal['data'] };
@@ -11,8 +11,9 @@ function deck() { const cards: Card[]=[]; const add=(color:Card['color'],value:s
 function draw(r:Room,p:Player,n=1) { for(let i=0;i<n;i++){ if(!r.deck.length && r.discard.length>1){const top=r.discard.pop()!;r.deck=shuffle(r.discard);r.discard=[top];} const c=r.deck.pop(); if(c)p.hand.push(c); } }
 function advance(r:Room,n=1) { const index=r.players.findIndex(p=>p.id===r.turn);r.turn=r.players[(index+n*r.direction+r.players.length*10)%r.players.length]?.id ?? ''; }
 function log(r:Room,s:string){r.log=[s,...r.log].slice(0,15);}
-function snapshot(r:Room,p:Player,after=0):Snapshot { return {pendingDraw:r.pendingDraw ?? 0,code:r.code,self:p.id,host:r.host,public:r.public,phase:r.phase,players:r.players.map(x=>({id:x.id,name:x.name,count:x.hand.length,voice:x.voice,connected:Date.now()-x.seen<20000})),hand:p.hand,top:r.discard.at(-1)??null,color:r.color,turn:r.turn,direction:r.direction,winner:r.winner,log:r.log,signals:r.signals.filter(s=>s.to===p.id&&s.id>after)}; }
-export function unoAction(input:Input) {
+function snapshot(r:Room,p:Player,after=0):Snapshot { r.revision=(r.revision??0)+1; return {revision:r.revision,pendingDraw:r.pendingDraw ?? 0,code:r.code,self:p.id,host:r.host,public:r.public,phase:r.phase,players:r.players.map(x=>({id:x.id,name:x.name,count:x.hand.length,voice:x.voice,connected:Date.now()-x.seen<20000})),hand:p.hand,top:r.discard.at(-1)??null,color:r.color,turn:r.turn,direction:r.direction,winner:r.winner,log:r.log,signals:r.signals.filter(s=>s.to===p.id&&s.id>after)}; }
+export function unoAction(input:Input, store = rooms) {
+ const rooms = store;
  const now=Date.now(); for(const [code,r] of rooms)if(now-r.updated>1800000)rooms.delete(code);
  let r=rooms.get(input.code??'');
  if(input.action==='create'||input.action==='quick') {

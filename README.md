@@ -4,9 +4,16 @@ Run `npm run dev -- --hostname 0.0.0.0` for development or `npm run build` follo
 
 ## Multiplayer hosting
 
-Deploy this Next.js app to one persistent Node.js process behind HTTPS. Room codes and public matchmaking work across browsers connected to that same server. Rooms currently live in process memory and are lost on restart. Do not deploy this room implementation to stateless serverless functions or multiple independent replicas. Move room state to a shared transactional store before horizontal scaling.
+For Vercel, connect an Upstash Redis database and add these server-only environment variables to your Vercel project, then redeploy:
 
-The local preview is not a public Internet deployment. No hosting account or public endpoint has been configured.
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+
+Use the read/write REST token, not the read-only token. Never prefix these with NEXT_PUBLIC. Choose a database region close to the Vercel function region. All players must use the same deployed site and database. No Redis credentials are included in this project.
+
+Rooms are now stored in Redis with atomic compare-and-swap updates and 30-minute idle expiry. Public matchmaking is shared across instances. Local development without Redis continues to use memory. On Vercel, missing storage configuration produces a clear error instead of silently creating isolated rooms.
+
+The current game transport uses HTTP polling every 400 ms, not Socket.IO/WebSockets. Actual update latency includes network and database round trips. Revisions prevent stale snapshots from undoing newer moves; duplicate local button submissions are blocked. This does not eliminate cold starts or provide zero-latency delivery. At scale, use a managed realtime transport to reduce polling volume.
 
 ## Voice
 
