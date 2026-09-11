@@ -13,6 +13,7 @@ export function useRoomTransport(
     new Map<
       number,
       {
+        input: unknown;
         resolve: (result: Result) => void;
         reject: (error: Error) => void;
         timer: ReturnType<typeof setTimeout>;
@@ -21,18 +22,32 @@ export function useRoomTransport(
   );
   const wake = useRef<(() => void) | null>(null);
   const socketSession = useRef<string | null>(null);
+  const sendHttp = useCallback(async (input: unknown) => {
+    const response = await fetch("/api/uno", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(10000),
+      body: JSON.stringify(input),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error);
+    return data as Result;
+  }, []);
   useEffect(() => {
     let stopped = false;
     let retry: ReturnType<typeof setTimeout>;
     let delay = 1000;
     const rejectPending = () => {
-      for (const task of pending.current.values()) {
-        clearTimeout(task.timer);
-        task.reject(
-          new Error("Connection interrupted. Checking the latest table state…"),
-        );
-      }
+      // The socket died before these moves got a reply. Every mutating action here
+      // is safe to retry (replaying an already-applied move fails a clean state
+      // check rather than double-applying), so fall back to HTTP instead of
+      // surfacing a scary error for a routine reconnect.
+      const tasks = [...pending.current.values()];
       pending.current.clear();
+      for (const task of tasks) {
+        clearTimeout(task.timer);
+        sendHttp(task.input).then(task.resolve, task.reject);
+      }
     };
     const connect = () => {
       if (stopped) return;
@@ -83,7 +98,7 @@ export function useRoomTransport(
       socket.current?.close();
       rejectPending();
     };
-  }, []);
+  }, [sendHttp]);
   const request = useCallback<RoomRequest>(
     async (action, extra = {}) => {
       const input = { ...session.current, action, after: cursor.current, ...extra };
@@ -103,35 +118,27 @@ export function useRoomTransport(
           return await new Promise<Result>((resolve, reject) => {
             const timer = setTimeout(() => {
               pending.current.delete(id);
-              reject(
-                new Error(
-                  "Move confirmation timed out. Check your hand before trying again.",
-                ),
-              );
+              // No reply within 10s (e.g. the experimental socket bridge wedged
+              // silently). The move is safe to resend over HTTP: replaying an
+              // already-applied action fails a clean state check server-side
+              // rather than double-applying.
+              sendHttp(input).then(resolve, reject);
               ws.close();
             }, 10000);
-            pending.current.set(id, { resolve, reject, timer });
+            pending.current.set(id, { input, resolve, reject, timer });
             try {
               ws.send(JSON.stringify({ id, input }));
             } catch {
               clearTimeout(timer);
               pending.current.delete(id);
-              reject(new Error("Socket disconnected. Please try again."));
+              sendHttp(input).then(resolve, reject);
             }
           });
         }
       }
-      const response = await fetch("/api/uno", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(10000),
-        body: JSON.stringify(input),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
-      return data;
+      return await sendHttp(input);
     },
-    [session, cursor],
+    [session, cursor, sendHttp],
   );
   return { request, wake };
 }
