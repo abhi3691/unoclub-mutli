@@ -27,11 +27,13 @@ async function loadRoom(tx: Transaction, code: string): Promise<Room | null> {
   const publicSnap = await tx.get(rooms().doc(code));
   if (!publicSnap.exists) return null;
   const pub = publicSnap.data() as PublicRoom;
-  const secretSnap = await tx.get(secretOf(code));
-  const deck = (secretSnap.data()?.deck as Room["deck"]) ?? [];
-  const handSnaps = await Promise.all(
-    pub.players.map((p) => tx.get(handsOf(code).doc(p.uid))),
+  // One batched round trip for the deck doc + every hand doc, instead of one
+  // round trip per document — halves the transaction's read latency.
+  const [secretSnap, ...handSnaps] = await tx.getAll(
+    secretOf(code),
+    ...pub.players.map((p) => handsOf(code).doc(p.uid)),
   );
+  const deck = (secretSnap!.data()?.deck as Room["deck"]) ?? [];
   const signals: Room["signals"] = [];
   const players = pub.players.map((p, i) => {
     const hand = handSnaps[i]!.data() as HandDoc | undefined;
