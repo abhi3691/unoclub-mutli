@@ -1,4 +1,4 @@
-# Uno Online
+# Uno Online multiplayer game
 
 Run `npm run dev -- --hostname 0.0.0.0` for development or `npm run build` followed by `npm start` for production. This is the standalone Uno Online project.
 
