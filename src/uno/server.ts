@@ -231,8 +231,10 @@ export function unoAction(input: Input, store = rooms) {
       x.hand = [];
       draw(r, x, 7);
     }
+    // Only a Wild or Wild +4 is invalid as the opening card and gets redrawn;
+    // every other card keeps its usual effect on who plays first (below).
     let top = r.deck.pop()!;
-    while (top.color === "wild" || !/^\d$/.test(top.value)) {
+    while (top.color === "wild") {
       r.deck.unshift(top);
       top = r.deck.pop()!;
     }
@@ -241,6 +243,17 @@ export function unoAction(input: Input, store = rooms) {
     r.turn = r.players[0].id;
     r.phase = "playing";
     log(r, "Cards dealt. Let’s play!");
+    if (top.value === "skip") {
+      log(r, `Opening skip: ${r.players[0].name} loses their turn`);
+      advance(r);
+    } else if (top.value === "reverse") {
+      r.direction = -1;
+      log(r, "Opening reverse: play starts in the other direction");
+    } else if (top.value === "+2") {
+      draw(r, r.players[0], 2);
+      log(r, `Opening +2: ${r.players[0].name} draws 2 and is skipped`);
+      advance(r);
+    }
   }
   if (input.action === "pass") {
     if (r.phase !== "playing" || r.turn !== p.id) fail("Wait for your turn.");
