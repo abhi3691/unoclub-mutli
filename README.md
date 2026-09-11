@@ -13,7 +13,7 @@ Use the read/write REST token, not the read-only token. Never prefix these with 
 
 Rooms are now stored in Redis with atomic compare-and-swap updates and 30-minute idle expiry. Public matchmaking is shared across instances. Local development without Redis continues to use memory. On Vercel, missing storage configuration produces a clear error instead of silently creating isolated rooms.
 
-The current game transport uses HTTP polling every 400 ms, not Socket.IO/WebSockets. Actual update latency includes network and database round trips. Revisions prevent stale snapshots from undoing newer moves; duplicate local button submissions are blocked. This does not eliminate cold starts or provide zero-latency delivery. At scale, use a managed realtime transport to reduce polling volume.
+The game uses native WebSockets where supported, with HTTP fallback and a 400 ms reconciliation heartbeat. Actual update latency includes network and database round trips. Revisions prevent stale snapshots from undoing newer moves; duplicate local button submissions are blocked. This does not eliminate cold starts or provide zero-latency delivery. At scale, use a managed realtime transport to reduce polling volume.
 
 ## Voice
 
@@ -28,3 +28,15 @@ Voice uses browser WebRTC with opt-in microphone permission, individual mute, an
 `npm run typecheck`
 
 With the app running: `node scripts/check-uno.mjs`. This verifies capacity, host permissions, hidden hands, turn checks, draw behavior, token authentication, matchmaking and voice presence.
+
+## Code structure and formatting
+
+`Uno.tsx` composes the page. `GameTable`, `RoomLobby`, `VoicePanel`, `GameDialog`, `GameHeader`, and `PlayingCard` own the UI. `useUnoGame` coordinates room state, `useVoiceConnection` handles WebRTC, `useRoomTransport` handles WebSocket/HTTP transport, and `useCardMotion` handles animation.
+
+Run `npm run format` to format the project or `npm run format:check` to validate formatting.
+
+## WebSocket transport
+
+The client now sends authenticated game actions and voice signaling over a native WebSocket at `/api/uno/socket` when available. Other players on the same function instance receive immediate invalidation notifications. A 400 ms synchronization heartbeat reconciles changes across Vercel instances through Redis; Redis pub/sub fan-out is not yet implemented. Socket messages never broadcast another player's private hand. Disconnects reconnect with backoff; HTTP remains available while disconnected. Unconfirmed mutation requests are not automatically replayed.
+
+Vercel uses `@vercel/functions` experimental WebSocket upgrades with Fluid compute enabled. Configure Redis as above. Local `next dev` uses HTTP fallback; use Vercel CLI 54.14.2 or newer (`vercel dev`) to test the upgrade endpoint locally. Redeploy to activate the socket endpoint. Production socket behavior still needs verification against your deployed URL.

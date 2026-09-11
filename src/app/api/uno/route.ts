@@ -1,8 +1,30 @@
-import { z } from 'zod';
-import { storedUnoAction, StorageError } from '@/uno/storage';
-export const runtime='nodejs';
-const schema=z.object({action:z.enum(['create','join','quick','sync','start','leave','play','draw','voice','signal']),name:z.string().max(20).optional(),code:z.string().regex(/^[A-F0-9]{6}$/).optional(),token:z.string().length(48).optional(),public:z.boolean().optional(),card:z.string().max(24).optional(),color:z.enum(['red','yellow','green','blue']).optional(),uno:z.boolean().optional(),voice:z.boolean().optional(),after:z.number().int().nonnegative().optional(),to:z.string().max(20).optional(),data:z.object({description:z.object({type:z.enum(['offer','answer','pranswer','rollback']),sdp:z.string().max(16000).optional()}).optional(),candidate:z.object({candidate:z.string().max(2000).optional(),sdpMid:z.string().nullable().optional(),sdpMLineIndex:z.number().nullable().optional(),usernameFragment:z.string().nullable().optional()}).optional()}).optional()});
-export async function POST(request:Request){
- const origin=request.headers.get('origin');if(origin&&new URL(origin).host!==(request.headers.get('host')??new URL(request.url).host))return Response.json({error:'Invalid origin'},{status:403});
- try{const body=await request.text();if(body.length>20000)throw new Error('Request too large');const result=await storedUnoAction(schema.parse(JSON.parse(body)));return Response.json(result,{headers:{'Cache-Control':'no-store'}});}catch(e){return Response.json({error:e instanceof z.ZodError?'Invalid request':e instanceof Error?e.message:'Request failed'},{status:e instanceof StorageError?503:400});}
+import { roomActionSchema } from "@/uno/schema";
+import { z } from "zod";
+import { storedUnoAction, StorageError } from "@/uno/storage";
+export const runtime = "nodejs";
+export async function POST(request: Request) {
+  const origin = request.headers.get("origin");
+  if (
+    origin &&
+    new URL(origin).host !== (request.headers.get("host") ?? new URL(request.url).host)
+  )
+    return Response.json({ error: "Invalid origin" }, { status: 403 });
+  try {
+    const body = await request.text();
+    if (body.length > 20000) throw new Error("Request too large");
+    const result = await storedUnoAction(roomActionSchema.parse(JSON.parse(body)));
+    return Response.json(result, { headers: { "Cache-Control": "no-store" } });
+  } catch (e) {
+    return Response.json(
+      {
+        error:
+          e instanceof z.ZodError
+            ? "Invalid request"
+            : e instanceof Error
+              ? e.message
+              : "Request failed",
+      },
+      { status: e instanceof StorageError ? 503 : 400 },
+    );
+  }
 }

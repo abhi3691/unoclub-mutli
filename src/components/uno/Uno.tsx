@@ -1,34 +1,94 @@
-'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Card, Color, Snapshot } from '@/uno/types';
-import { useCardMotion } from './useCardMotion';
-const colors:Color[]=['red','yellow','green','blue'];
-const symbol=(v:string)=>({skip:'⊘',reverse:'⇄',wild:'✦'}[v]??v);
-function PlayingCard({card,back=false,onClick,disabled=false}:{card?:Card;back?:boolean;onClick?:()=>void;disabled?:boolean}){return <button data-card-id={card?.id} disabled={disabled} onClick={onClick} className={`playing-card ${back?'back':card?.color}`} aria-label={back?'Draw a card':`${card?.color} ${card?.value}`}><span className="corner">{back?'':symbol(card?.value??'')}</span><span className="oval">{back?<b>UNO<span>CLUB</span></b>:symbol(card?.value??'')}</span><span className="corner bottom">{back?'':symbol(card?.value??'')}</span></button>;}
-export default function Uno(){
- const [name,setName]=useState(''),[code,setCode]=useState(''),[room,setRoom]=useState<Snapshot|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[tab,setTab]=useState('quick'),[rules,setRules]=useState(false),[wild,setWild]=useState<Card|null>(null),[uno,setUno]=useState(false),[mic,setMic]=useState(false),[muted,setMuted]=useState(false),[voiceStatus,setVoiceStatus]=useState('Voice is off');
- useCardMotion(room);
- const session=useRef<{code:string;token:string}|null>(null),latest=useRef<Snapshot|null>(null),stream=useRef<MediaStream|null>(null),peers=useRef(new Map<string,RTCPeerConnection>()),audios=useRef(new Map<string,HTMLAudioElement>()),cursor=useRef(0),pendingIce=useRef(new Map<string,RTCIceCandidateInit[]>()),processing=useRef(false),actionPending=useRef(false);
- const request=useCallback(async(action:string,extra:Record<string,unknown>={})=>{const res=await fetch('/api/uno',{method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(10000),body:JSON.stringify({...session.current,action,after:cursor.current,...extra})});const data=await res.json();if(!res.ok)throw new Error(data.error);return data;},[]);
- const apply=useCallback((s:Snapshot)=>{if(latest.current?.code===s.code&&latest.current.revision>s.revision)return;latest.current=s;setRoom(s);},[]);
- const stopVoice=useCallback(()=>{stream.current?.getTracks().forEach(t=>t.stop());stream.current=null;peers.current.forEach(p=>p.close());peers.current.clear();audios.current.forEach(a=>{a.pause();a.srcObject=null;});audios.current.clear();setMic(false);setVoiceStatus('Voice is off');},[]);
- const connect=useCallback((id:string)=>{const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});peers.current.set(id,pc);stream.current?.getTracks().forEach(t=>pc.addTrack(t,stream.current!));pc.onicecandidate=e=>{if(e.candidate)void request('signal',{to:id,data:{candidate:e.candidate.toJSON()}}).catch(()=>{});};pc.ontrack=e=>{const audio=new Audio();audio.srcObject=e.streams[0];audio.autoplay=true;audios.current.set(id,audio);void audio.play().catch(()=>setVoiceStatus('Click the microphone to reconnect audio'));};pc.onconnectionstatechange=()=>{if(pc.connectionState==='connected')setVoiceStatus('Connected to voice');if(pc.connectionState==='failed')setVoiceStatus('Voice connection failed on this network');};return pc;},[request]);
- useEffect(()=>{const saved=sessionStorage.getItem('uno-session');if(saved){try{session.current=JSON.parse(saved);}catch{sessionStorage.removeItem('uno-session');}}const timer=setInterval(async()=>{if(!session.current||processing.current||actionPending.current)return;processing.current=true;try{const activeSession=session.current;const data=await request('sync');if(session.current!==activeSession)return;const s:Snapshot=data.snapshot;apply(s);for(const [id,pc]of peers.current)if(!s.players.some(p=>p.id===id&&p.voice)){pc.close();peers.current.delete(id);audios.current.get(id)?.pause();audios.current.delete(id);}if(stream.current){for(const sig of s.signals){cursor.current=Math.max(cursor.current,sig.id);const pc=peers.current.get(sig.from)??connect(sig.from);if(sig.data.description){await pc.setRemoteDescription(sig.data.description);for(const candidate of pendingIce.current.get(sig.from)??[])await pc.addIceCandidate(candidate);pendingIce.current.delete(sig.from);if(sig.data.description.type==='offer'){await pc.setLocalDescription(await pc.createAnswer());await request('signal',{to:sig.from,data:{description:pc.localDescription}});}}else if(sig.data.candidate){if(pc.remoteDescription)await pc.addIceCandidate(sig.data.candidate);else pendingIce.current.set(sig.from,[...(pendingIce.current.get(sig.from)??[]),sig.data.candidate]);}}for(const p of s.players)if(p.voice&&p.id!==s.self&&s.self<p.id&&!peers.current.has(p.id)){const pc=connect(p.id);await pc.setLocalDescription(await pc.createOffer());await request('signal',{to:p.id,data:{description:pc.localDescription}});}}}catch(e){setError(e instanceof Error?e.message:'Connection interrupted');}finally{processing.current=false;}},400);return()=>{clearInterval(timer);stopVoice();};},[apply,connect,request,stopVoice]);
- async function act(action:string,extra:Record<string,unknown>={}){if(actionPending.current)return;actionPending.current=true;setError('');setBusy(true);try{const data=await request(action,extra);if(data.token){session.current={code:data.snapshot.code,token:data.token};sessionStorage.setItem('uno-session',JSON.stringify(session.current));cursor.current=0;}if(data.snapshot)apply(data.snapshot);if(action==='play'){setWild(null);setUno(false);}if(action==='leave'){stopVoice();session.current=null;latest.current=null;sessionStorage.removeItem('uno-session');setRoom(null);}}catch(e){setError(e instanceof Error?e.message:'Something went wrong');}finally{actionPending.current=false;setBusy(false);}}
- async function toggleVoice(){if(!room){setError('Join a table to use voice chat.');return;}if(mic){stopVoice();await act('voice',{voice:false});return;}try{stream.current=await navigator.mediaDevices.getUserMedia({audio:true});setMic(true);setMuted(false);setVoiceStatus('Waiting for voice participants');await act('voice',{voice:true});}catch{stopVoice();setError('Microphone unavailable. Allow microphone access on HTTPS or localhost.');}}
- const mine=room?.turn===room?.self&&room?.phase==='playing';const current=room?.players.find(p=>p.id===room.turn);const preview:Card[]=[{id:'a',color:'blue',value:'7'},{id:'b',color:'green',value:'reverse'},{id:'c',color:'red',value:'5'},{id:'d',color:'yellow',value:'+2'},{id:'e',color:'wild',value:'wild'}];
- return <div className={`uno-app ${room ? "has-room" : "no-room"} ${room?.phase === "playing" ? "in-game" : ""}`}><header className="topbar"><a className="brand" href="/">uno<span>club</span><i>●</i></a><nav><span className="nav-active">Play</span><button onClick={()=>setRules(true)}>How to play</button></nav><div className="header-right"><span className="online-dot"/> Made for game night <span className="profile">{name[0]?.toUpperCase()||'U'}</span></div></header>
- <main><div className="page-heading"><div><div className="eyebrow">GOOD FRIENDS. WILD CARDS.</div><h1>Your table. Your people.</h1><p>A little luck. A little strategy. A whole lot of “draw four.”</p></div><span className="edition">THE CLASSIC, TOGETHER <span>2–8 PLAYERS · LIVE VOICE</span></span></div>
- <div className="game-layout"><section className="table-panel"><div className="table-toolbar"><div><span className="live-badge">{room?'LIVE TABLE':'THE CLUB TABLE'}</span><span className="room-label">{room?`Room ${room.code}`:'A seat for everyone'}</span></div><button className="icon-button" onClick={()=>setRules(true)} aria-label="Game rules">ⓘ</button></div>
- <div className="felt"><div className="felt-line"/><div className="table-watermark">uno club</div><div className="opponents">{room?room.players.filter(p=>p.id!==room.self).map((p,i)=><div data-player-id={p.id} className={`seat ${room.turn===p.id?'active-seat':''}`} key={p.id}><div className={`avatar avatar-${i%4}`}>{p.name[0].toUpperCase()}</div><strong>{p.name}</strong><small>{p.connected?`${p.count} cards`:'Reconnecting'} {p.voice?'♫':''}</small></div>):<><div className="empty-seat"><span>+</span>Your friend</div><div className="empty-seat"><span>+</span>Your rival</div><div className="empty-seat"><span>+</span>Your wildcard</div></>}</div>
- <div className="center-play"><div className="draw-stack"><PlayingCard back onClick={()=>room&&act('draw')} disabled={!mine||busy}/><small>{room?.pendingDraw?`DRAW ${room.pendingDraw} CARDS`:'DRAW PILE'}</small></div><span className="direction">{room?.direction===-1?'↶':'↻'}</span><div className="discard"><PlayingCard card={room?.top??{id:'preview',color:'red',value:'5'}} disabled/><small>{room?.top?`${room.color.toUpperCase()} TO PLAY`:'DISCARD PILE'}</small></div></div>
- <div className="table-message" role="status" aria-live="polite">{room?.phase==='finished'?`${room.players.find(p=>p.id===room.winner)?.name} wins the round!`:room?.phase==='playing'?(mine?(room.pendingDraw?`Stack a ${room.top?.value} or draw ${room.pendingDraw} cards.`:'Your turn. Make it a good one.'):`${current?.name} is thinking…`):room?`${room.players.length} of 8 seats filled · Waiting for the host to deal`:'The next great game night starts here.'}</div>
- <div aria-label="Your cards; swipe to see more" className={`hand ${room?'real-hand':''}`}>{(room?.hand.length?room.hand:!room?preview:[]).map(c=><PlayingCard key={c.id} card={c} disabled={!mine||busy||!!(room?.pendingDraw&&c.value!==room.top?.value)} onClick={()=>c.color==='wild'?setWild(c):act('play',{card:c.id,uno})}/>)}</div>
- {room?.phase==='playing'&&<p className="hand-hint">Swipe your cards · Tap a card to play</p>}<div className="your-seat"><div className="you-avatar">{name[0]?.toUpperCase()||'Y'}</div><div><strong>{room?room.players.find(p=>p.id===room.self)?.name:'You'}</strong><small>{room?`${room.hand.length} cards in hand`:'Your winning streak awaits'}</small></div>{room?.phase==='playing'&&<button disabled={!mine||busy} aria-pressed={uno} className={`uno-call ${uno?'armed':''}`} onClick={()=>setUno(!uno)}>UNO! {uno?'✓':''}</button>}{room?.phase==='playing'&&<button className="mobile-draw" disabled={!mine||busy} onClick={()=>act('draw')}>{room?.pendingDraw?`Draw ${room.pendingDraw} cards`:'Draw card'}</button>}</div></div>
- <div className="table-footer"><span><span className="tiny-colors">● ● ● ●</span> Match a color. Match a number. Make a memory.</span><span>HOUSE RULES ↗</span></div></section>
- <aside><section className="lobby-card"><div className="eyebrow">{room?'YOU’RE AT THE TABLE':'PULL UP A CHAIR'}</div><h2>{room?'Let’s play.':'Let’s shuffle things up.'}</h2>{!room?<><p>Meet new people or bring your favorite ones.</p><label className="field-label" htmlFor="name">YOUR DISPLAY NAME</label><input id="name" autoComplete="nickname" enterKeyHint="done" maxLength={20} placeholder="What should we call you?" value={name} onChange={e=>setName(e.target.value)}/><div className="tabs">{['quick','friends'].map(t=><button key={t} className={tab===t?'selected':''} onClick={()=>setTab(t)}>{t==='quick'?'Quick play':'With friends'}</button>)}</div>{tab==='quick'?<><button className="primary" disabled={busy||!name.trim()} onClick={()=>act('quick',{name})}>Find a table <span>↗</span></button><p className="helper">Join a public table. New friends included.</p></>:<><button className="primary" disabled={busy||!name.trim()} onClick={()=>act('create',{name})}>Create private room <span>+</span></button><div className="join-row"><input aria-label="Room code" autoCapitalize="characters" autoCorrect="off" spellCheck={false} enterKeyHint="go" placeholder="6-character code" value={code} maxLength={6} onChange={e=>setCode(e.target.value.toUpperCase())}/><button disabled={busy||!name.trim()||code.length!==6} onClick={()=>act('join',{name,code})}>Join ↗</button></div></>}<div className="divider"/><div className="lobby-note"><span>♧</span><div><strong>More friends. More chaos.</strong><p>2–8 players at every table.<br/>No downloads. Just deal.</p></div></div></>:<><p>{room.public?'Public table · Anyone can join':'Private table · Invite your people'}</p><button className="room-code" onClick={()=>navigator.clipboard.writeText(room.code).then(()=>setError('Room code copied!')).catch(()=>setError(`Share this code: ${room.code}`))}>{room.code}<small>COPY CODE ⧉</small></button><div className="member-count">{room.players.length}/8 players seated</div>{room.host===room.self&&room.phase!=='playing'?<button className="primary" disabled={busy||room.players.length<2} onClick={()=>act('start')}>{room.phase==='finished'?'Play again':'Deal the cards'} <span>↗</span></button>:<p className="helper">{room.phase==='lobby'?'The host will start when everyone is ready.':'Match the active color or the top card’s symbol.'}</p>}<button className="leave" onClick={()=>act('leave')} disabled={busy}>Leave table</button></>}{error&&<p role="status" className="notice">{error}</p>}</section>
- <section className="voice-card"><div className="voice-title"><span className="voice-icon">♫</span><div><h3>Good games sound better.</h3><p>{mic?voiceStatus:'Talk, laugh, call out that +4.'}</p></div></div><div className="voice-controls"><span>Voice chat <small>{mic?'ENABLED':'OPTIONAL'}</small></span><button role="switch" aria-checked={mic} aria-label="Enable voice chat" className={`switch ${mic?'on':''}`} onClick={toggleVoice}><span/></button></div>{mic&&<button className="mute" onClick={()=>{stream.current?.getAudioTracks().forEach(t=>t.enabled=muted);setMuted(!muted);}}>{muted?'Unmute microphone':'Mute microphone'}</button>}<small className="privacy">Your mic is off until you turn it on.</small></section>
- {room?<section className="activity"><h3>At the table</h3>{room.log.slice(0,4).map((l,i)=><p key={i}>{l}</p>)}</section>:<div className="side-quote">“Friendships may be tested.<br/>Rematches are encouraged.”<span>THE UNO CLUB WAY</span></div>}</aside></div>
- <footer className="bottom-footer"><span>uno club <span>·</span> A familiar game. A new way to hang out.</span><span>Uno-style fan game · Not affiliated with Mattel</span></footer></main>
- {(rules||wild)&&<div className="modal-backdrop"><section className="modal" role="dialog" aria-modal="true" aria-label={wild?'Choose a color':'How to play'}><button className="close-modal" onClick={()=>{setRules(false);setWild(null);}} aria-label="Close">×</button>{wild?<><h2>Pick your color.</h2><div className="color-picker">{colors.map(c=><button key={c} className={c} disabled={busy} onClick={()=>act('play',{card:wild.id,color:c,uno})}>{c}</button>)}</div></>:<><div className="eyebrow">THE CLUB RULEBOOK</div><h2>First to zero wins.</h2><p>Everyone starts with 7 cards. On your turn, match the discard’s color or symbol, or play a wild card.</p><p><b>Skip</b> skips the next player. <b>Reverse</b> changes direction. <b>+2</b> passes a draw penalty to the next player. Stack another +2 to add two more, or draw the total and lose your turn. In a two-player game, stacking sends the penalty back to your opponent. <b>+4</b> stacks the same way: another +4 adds four more, or draw the total and lose your turn. Stack only the same type (+2 on +2, +4 on +4). Starting a Wild +4 requires no matching color; responding to a +4 with another +4 is always allowed. Choose a color each time.</p><p>Drawing takes one card and ends your turn. Tap <b>UNO!</b> before playing your second-to-last card, or draw two penalty cards. Pick a new color when you play a wild.</p><p>Invite friends with the room code or use Quick play for a public table. The host deals once at least two players join.</p></>}</section></div>}</div>;
+"use client";
+import { useUnoGame } from "./useUnoGame";
+import { GameHeader } from "./GameHeader";
+import { GameTable } from "./GameTable";
+import { RoomLobby } from "./RoomLobby";
+import { VoicePanel } from "./VoicePanel";
+import { GameDialog } from "./GameDialog";
+
+export default function Uno() {
+  const game = useUnoGame();
+  const { room } = game;
+  return (
+    <div
+      className={`uno-app ${room ? "has-room" : "no-room"} ${room?.phase === "playing" ? "in-game" : ""}`}
+    >
+      <GameHeader name={game.name} setRules={game.setRules} />
+      <main>
+        <div className="page-heading">
+          <div>
+            <div className="eyebrow">GOOD FRIENDS. WILD CARDS.</div>
+            <h1>Your table. Your people.</h1>
+            <p>A little luck. A little strategy. A whole lot of “draw four.”</p>
+          </div>
+          <span className="edition">
+            THE CLASSIC, TOGETHER <span>2–8 PLAYERS · LIVE VOICE</span>
+          </span>
+        </div>
+        <div className="game-layout">
+          <GameTable
+            name={game.name}
+            room={room}
+            busy={game.busy}
+            uno={game.uno}
+            setUno={game.setUno}
+            setRules={game.setRules}
+            setWild={game.setWild}
+            act={game.act}
+          />
+          <aside>
+            <RoomLobby
+              room={room}
+              name={game.name}
+              setName={game.setName}
+              code={game.code}
+              setCode={game.setCode}
+              tab={game.tab}
+              setTab={game.setTab}
+              busy={game.busy}
+              act={game.act}
+              error={game.error}
+              setError={game.setError}
+            />
+            <VoicePanel
+              mic={game.mic}
+              muted={game.muted}
+              voiceStatus={game.voiceStatus}
+              toggleVoice={game.toggleVoice}
+              toggleMute={game.toggleMute}
+            />
+            {room ? (
+              <section className="activity">
+                <h3>At the table</h3>
+                {room.log.slice(0, 4).map((l, i) => (
+                  <p key={i}>{l}</p>
+                ))}
+              </section>
+            ) : (
+              <div className="side-quote">
+                “Friendships may be tested.
+                <br />
+                Rematches are encouraged.”<span>THE UNO CLUB WAY</span>
+              </div>
+            )}
+          </aside>
+        </div>
+        <footer className="bottom-footer">
+          <span>
+            uno club <span>·</span> A familiar game. A new way to hang out.
+          </span>
+          <span>Uno-style fan game · Not affiliated with Mattel</span>
+        </footer>
+      </main>
+      <GameDialog
+        rules={game.rules}
+        wild={game.wild}
+        setRules={game.setRules}
+        setWild={game.setWild}
+        busy={game.busy}
+        act={game.act}
+        uno={game.uno}
+      />
+    </div>
+  );
 }
