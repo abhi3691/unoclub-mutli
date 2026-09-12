@@ -5,6 +5,8 @@ export const roomActionSchema = z.object({
     "join",
     "quick",
     "sync",
+    "ping",
+    "skipRanking",
     "start",
     "leave",
     "play",
@@ -46,3 +48,5 @@ export const roomActionSchema = z.object({
     })
     .optional(),
 });
+
+export type RoomAction = z.infer<typeof roomActionSchema>["action"];

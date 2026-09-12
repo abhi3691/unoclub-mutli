@@ -1,3 +1,4 @@
+import type { RoomAction } from "./schema";
 import { randomBytes, randomInt } from "node:crypto";
 import type { Card, Color, Signal, Snapshot } from "./types";
 type Player = {
@@ -39,7 +40,7 @@ function activePlayers(r: Room): Player[] {
 const g = globalThis as typeof globalThis & { unoRooms?: Map<string, Room> };
 const rooms = (g.unoRooms ??= new Map<string, Room>());
 export type Input = {
-  action: string;
+  action: RoomAction;
   name?: string;
   code?: string;
   token?: string;
@@ -191,6 +192,8 @@ export function unoAction(input: Input, store = rooms) {
       rooms.set(code, r);
     }
   }
+  // Leaving is idempotent: an expired room already has no seat to remove.
+  if (!r && input.action === "leave") return { left: true };
   if (!r) fail("Room not found. Check your six-character code.");
   if (["create", "quick", "join"].includes(input.action)) {
     if (!input.uid) fail("Not signed in yet. Please try again in a moment.");
@@ -214,6 +217,7 @@ export function unoAction(input: Input, store = rooms) {
     return { token: p.token, snapshot: snapshot(r, p) };
   }
   const p = r.players.find((x) => x.token === input.token);
+  if (!p && input.action === "leave") return { left: true };
   if (!p) fail("Your session expired. Please join again.");
   p.seen = now;
   r.updated = now;

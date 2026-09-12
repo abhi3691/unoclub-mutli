@@ -1,12 +1,19 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
+import type { RoomAction } from "@/uno/schema";
 import type { Card, Snapshot } from "@/uno/types";
 import { auth, db, ensureSignedIn } from "@/firebase/client";
+import {
+  RoomRequestError,
+  isExpiredSession,
+  isRetryableRequest,
+  listenerFailure,
+} from "@/uno/connection-errors";
 import { useVoiceConnection } from "./useVoiceConnection";
 
 export type RoomRequest = (
-  action: string,
+  action: RoomAction,
   extra?: Record<string, unknown>,
 ) => Promise<{ token?: string; snapshot?: Snapshot; left?: boolean }>;
 
@@ -85,7 +92,8 @@ export function useUnoGame() {
     publicPart = useRef<PublicDoc | null>(null),
     handPart = useRef<HandDoc | null>(null),
     actionPending = useRef(false),
-    resync = useRef<() => void>(() => {});
+    resync = useRef<() => void>(() => {}),
+    liveState = useRef<"connecting" | "live" | "retrying" | "blocked">("connecting");
 
   const apply = useCallback((s: Snapshot) => {
     if (latest.current?.code === s.code && latest.current.revision > s.revision) return;
@@ -102,12 +110,28 @@ export function useUnoGame() {
       body: JSON.stringify(body),
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error);
+    if (!response.ok)
+      throw new RoomRequestError(
+        data.error || `Request failed (${response.status})`,
+        response.status,
+      );
     return data;
   }, []);
 
   const { mic, muted, voiceStatus, stopVoice, syncVoice, startVoice, toggleMute } =
     useVoiceConnection(request, cursor);
+
+  const clearSession = useCallback(() => {
+    stopVoice();
+    session.current = null;
+    latest.current = null;
+    publicPart.current = null;
+    handPart.current = null;
+    cursor.current = 0;
+    sessionStorage.removeItem("uno-session");
+    setRoom(null);
+    setSessionVersion((v) => v + 1);
+  }, [stopVoice]);
 
   const remerge = useCallback(() => {
     if (!session.current || !publicPart.current) return;
@@ -149,11 +173,14 @@ export function useUnoGame() {
     let retry: ReturnType<typeof setTimeout> | undefined;
     let retryDelay = 1000;
     const current = () => !stopped && session.current === activeSession;
-    const fail = () => {
+    const fail = (error: unknown) => {
       if (!current() || retry) return;
       unsubPublic?.();
       unsubHand?.();
-      setError("Live connection interrupted. Reconnecting…");
+      const failure = listenerFailure(error);
+      liveState.current = failure.retry ? "retrying" : "blocked";
+      setError(failure.message);
+      if (!failure.retry) return;
       resync.current();
       retry = setTimeout(() => {
         retry = undefined;
@@ -167,16 +194,32 @@ export function useUnoGame() {
         if (!current()) return;
         publicPart.current = null;
         handPart.current = null;
+        let publicReady = false;
+        let handReady = false;
+        const ready = () => {
+          if (!publicReady || !handReady) return;
+          liveState.current = "live";
+          retryDelay = 1000;
+          setError((message) =>
+            /Live updates interrupted|Live connection interrupted/.test(message)
+              ? ""
+              : message,
+          );
+        };
         unsubPublic = onSnapshot(
           doc(db, "rooms", code),
+          { includeMetadataChanges: true },
           (snap) => {
             if (!current()) return;
             if (!snap.exists()) {
-              setError(
-                "This room has ended or expired. Leave the table to join another.",
-              );
+              if (!snap.metadata.fromCache) {
+                clearSession();
+                setError("This room has ended. Create or join another table.");
+              }
               return;
             }
+            publicReady = !snap.metadata.fromCache;
+            ready();
             publicPart.current = snap.data() as PublicDoc;
             remerge();
           },
@@ -184,19 +227,22 @@ export function useUnoGame() {
         );
         unsubHand = onSnapshot(
           doc(db, "rooms", code, "hands", user.uid),
+          { includeMetadataChanges: true },
           (snap) => {
             if (!current()) return;
             if (!snap.exists()) {
               resync.current();
               return;
             }
+            handReady = !snap.metadata.fromCache;
+            ready();
             handPart.current = snap.data() as HandDoc;
             remerge();
           },
           fail,
         );
-      } catch {
-        fail();
+      } catch (error) {
+        fail(error);
       }
     };
     void subscribe();
@@ -206,7 +252,7 @@ export function useUnoGame() {
       unsubPublic?.();
       unsubHand?.();
     };
-  }, [sessionVersion, remerge]);
+  }, [sessionVersion, remerge, clearSession]);
 
   // Keep this seat alive on the server (it prunes anyone idle for 90s) even
   // while just waiting out someone else's turn, and give every client a
@@ -222,9 +268,13 @@ export function useUnoGame() {
     const activeSession = session.current;
     let stopped = false;
     let inFlight = false;
+    let failures = 0;
+    let nextCheck = 0;
+    let terminal = false;
     const ping = async () => {
       if (
         stopped ||
+        terminal ||
         inFlight ||
         actionPending.current ||
         session.current !== activeSession ||
@@ -233,19 +283,39 @@ export function useUnoGame() {
         return;
       inFlight = true;
       try {
-        const data = await request("ping");
+        const data = await request("sync");
         if (stopped || session.current !== activeSession) return;
         if (data.snapshot) {
           apply(data.snapshot);
-          await syncVoice(data.snapshot);
+          void syncVoice(data.snapshot).catch(() => {});
         }
+        failures = 0;
         setError((message) =>
-          /connection interrupted|reconnecting|offline/i.test(message) ? "" : message,
+          /^(Connection interrupted|You’re offline)/.test(message) ? "" : message,
         );
-      } catch {
-        if (!stopped) setError("Connection interrupted. Reconnecting…");
+      } catch (error) {
+        if (stopped || session.current !== activeSession) return;
+        if (isExpiredSession(error)) {
+          terminal = true;
+          clearSession();
+          setError("Your table session ended. Please create or join a table again.");
+        } else if (!isRetryableRequest(error)) {
+          terminal = true;
+          setError(
+            error instanceof Error ? error.message : "Unable to reconnect to this table.",
+          );
+        } else if (++failures >= 2) {
+          setError("Connection interrupted. Reconnecting…");
+        }
       } finally {
         inFlight = false;
+        nextCheck =
+          Date.now() +
+          (failures
+            ? Math.min(2000 * 2 ** failures, 15000)
+            : liveState.current === "live"
+              ? 10000
+              : 2000);
       }
     };
     const onVisible = () => {
@@ -257,7 +327,9 @@ export function useUnoGame() {
       void ping();
     };
     void ping();
-    const interval = setInterval(ping, 10000);
+    const interval = setInterval(() => {
+      if (Date.now() >= nextCheck) void ping();
+    }, 1000);
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
     window.addEventListener("online", onVisible);
@@ -271,11 +343,11 @@ export function useUnoGame() {
       window.removeEventListener("online", onVisible);
       window.removeEventListener("offline", offline);
     };
-  }, [sessionVersion, request, apply, syncVoice]);
+  }, [sessionVersion, request, apply, syncVoice, clearSession]);
 
   useEffect(() => () => stopVoice(), [stopVoice]);
 
-  async function act(action: string, extra: Record<string, unknown> = {}) {
+  async function act(action: RoomAction, extra: Record<string, unknown> = {}) {
     if (actionPending.current) return;
     actionPending.current = true;
     setError("");
@@ -302,22 +374,14 @@ export function useUnoGame() {
         setWild(null);
         setUno(false);
       }
-      if (action === "leave") {
-        stopVoice();
-        session.current = null;
-        latest.current = null;
-        publicPart.current = null;
-        handPart.current = null;
-        cursor.current = 0;
-        sessionStorage.removeItem("uno-session");
-        setRoom(null);
-        setSessionVersion((v) => v + 1);
-      }
+      if (action === "leave") clearSession();
     } catch (e) {
+      if (isExpiredSession(e)) clearSession();
       setError(e instanceof Error ? e.message : "Something went wrong");
+      actionPending.current = false;
+      if (isRetryableRequest(e)) resync.current();
     } finally {
       actionPending.current = false;
-      resync.current();
       setBusy(false);
     }
   }

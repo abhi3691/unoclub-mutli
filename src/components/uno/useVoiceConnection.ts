@@ -94,7 +94,9 @@ export function useVoiceConnection(request: RoomRequest, cursor: RefObject<numbe
         // ones already handled. Skip anything at or before the cursor or an
         // already-answered offer would be re-answered on every game update,
         // triggering endless renegotiation instead of a stable connection.
-        const unseen = s.signals.filter((sig) => sig.id > cursor.current);
+        const unseen = s.signals
+          .filter((sig) => sig.id > cursor.current)
+          .sort((a, b) => a.id - b.id);
         for (const sig of unseen) {
           if (generation !== voiceGeneration.current) return;
           cursor.current = Math.max(cursor.current, sig.id);
