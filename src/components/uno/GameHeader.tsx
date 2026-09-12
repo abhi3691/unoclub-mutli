@@ -1,3 +1,4 @@
+import { Icon } from "./Icon";
 import type { UnoGame } from "./useUnoGame";
 
 type Props = Pick<UnoGame, "name" | "setRules">;
@@ -6,7 +7,9 @@ export function GameHeader({ name, setRules }: Props) {
     <header className="topbar">
       <a className="brand" href="/">
         uno<span>club</span>
-        <i>●</i>
+        <i>
+          <Icon name="dot" />
+        </i>
       </a>
       <nav>
         <span className="nav-active">Play</span>

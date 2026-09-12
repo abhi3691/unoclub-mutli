@@ -1,3 +1,4 @@
+import { Icon } from "./Icon";
 import type { UnoGame } from "./useUnoGame";
 
 type Props = Pick<
@@ -64,7 +65,10 @@ export function RoomLobby({
                 disabled={busy || !name.trim()}
                 onClick={() => act("quick", { name })}
               >
-                Find a table <span>↗</span>
+                Find a table{" "}
+                <span>
+                  <Icon name="arrowUpRight" />
+                </span>
               </button>
               <p className="helper">Join a public table. New friends included.</p>
             </>
@@ -93,14 +97,16 @@ export function RoomLobby({
                   disabled={busy || !name.trim() || code.length !== 6}
                   onClick={() => act("join", { name, code })}
                 >
-                  Join ↗
+                  Join <Icon name="arrowUpRight" />
                 </button>
               </div>
             </>
           )}
           <div className="divider" />
           <div className="lobby-note">
-            <span>♧</span>
+            <span>
+              <Icon name="players" />
+            </span>
             <div>
               <strong>More friends. More chaos.</strong>
               <p>
@@ -128,7 +134,9 @@ export function RoomLobby({
             }
           >
             {room.code}
-            <small>COPY CODE ⧉</small>
+            <small>
+              COPY CODE <Icon name="copy" />
+            </small>
           </button>
           <div className="member-count">{room.players.length}/8 players seated</div>
           {room.host === room.self && room.phase !== "playing" ? (
@@ -143,7 +151,9 @@ export function RoomLobby({
                     ? "Play again"
                     : "Deal next round"
                   : "Deal the cards"}{" "}
-                <span>↗</span>
+                <span>
+                  <Icon name="arrowUpRight" />
+                </span>
               </button>
               {room.phase === "finished" && !room.matchOver && (
                 <button

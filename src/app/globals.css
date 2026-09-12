@@ -2086,3 +2086,10 @@ a {
     width: 100%;
   }
 }
+
+.uno-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: -0.15em;
+  pointer-events: none;
+}

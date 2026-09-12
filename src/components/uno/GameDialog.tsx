@@ -1,3 +1,4 @@
+import { Icon } from "./Icon";
 import { useEffect, useRef } from "react";
 import type { UnoGame } from "./useUnoGame";
 import type { Color } from "@/uno/types";
@@ -68,7 +69,7 @@ export function GameDialog({ rules, wild, setRules, setWild, busy, act, uno }: P
             }}
             aria-label="Close"
           >
-            ×
+            <Icon name="close" />
           </button>
           {wild ? (
             <>

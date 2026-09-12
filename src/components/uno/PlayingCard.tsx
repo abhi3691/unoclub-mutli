@@ -1,5 +1,11 @@
+import { Icon } from "./Icon";
 import type { Card } from "@/uno/types";
-const symbol = (v: string) => ({ skip: "⊘", reverse: "⇄", wild: "✦" })[v] ?? v;
+const symbol = (value: string) =>
+  value === "skip" || value === "reverse" || value === "wild" ? (
+    <Icon name={value} />
+  ) : (
+    value
+  );
 export function PlayingCard({
   card,
   back = false,

@@ -1,3 +1,4 @@
+import { Icon } from "./Icon";
 import type { ReactNode } from "react";
 import type { UnoGame } from "./useUnoGame";
 import type { Card } from "@/uno/types";
@@ -43,7 +44,7 @@ export function GameTable({
           onClick={() => setRules(true)}
           aria-label="Game rules"
         >
-          ⓘ
+          <Icon name="info" />
         </button>
       </div>
       <div className="felt">
@@ -65,7 +66,7 @@ export function GameTable({
                   <strong>{p.name}</strong>
                   <small>
                     {p.connected ? `${p.count} cards` : "Reconnecting"}{" "}
-                    {p.voice ? "♫" : ""}
+                    {p.voice && <Icon name="mic" />}
                   </small>
                 </div>
               ))
@@ -94,7 +95,9 @@ export function GameTable({
               {room?.pendingDraw ? `DRAW ${room.pendingDraw} CARDS` : "DRAW PILE"}
             </small>
           </div>
-          <span className="direction">{room?.direction === -1 ? "↶" : "↻"}</span>
+          <span className="direction">
+            <Icon name={room?.direction === -1 ? "counterclockwise" : "clockwise"} />
+          </span>
           <div className="discard">
             <PlayingCard
               card={room?.top ?? { id: "preview", color: "red", value: "5" }}
@@ -182,7 +185,9 @@ export function GameTable({
             ))}
           </div>
           {room?.phase === "playing" && (
-            <p className="hand-hint">← Swipe to see every card →</p>
+            <p className="hand-hint">
+              <Icon name="arrowLeft" /> Swipe to see every card <Icon name="arrowRight" />
+            </p>
           )}
           <div className="your-seat">
             <div className="you-avatar">{name[0]?.toUpperCase() || "Y"}</div>
@@ -203,7 +208,7 @@ export function GameTable({
                 className={`uno-call ${uno ? "armed" : ""}`}
                 onClick={() => setUno(!uno)}
               >
-                UNO! {uno ? "✓" : ""}
+                UNO! {uno && <Icon name="check" />}
               </button>
             )}
             {room?.phase === "playing" && !room.drawnThisTurn && (
@@ -229,10 +234,15 @@ export function GameTable({
       </div>
       <div className="table-footer">
         <span>
-          <span className="tiny-colors">● ● ● ●</span> Match a color. Match a number. Make
-          a memory.
+          <span className="tiny-colors">
+            <Icon name="dot" /> <Icon name="dot" /> <Icon name="dot" />{" "}
+            <Icon name="dot" />
+          </span>{" "}
+          Match a color. Match a number. Make a memory.
         </span>
-        <span>HOUSE RULES ↗</span>
+        <span>
+          HOUSE RULES <Icon name="arrowUpRight" />
+        </span>
       </div>
     </section>
   );

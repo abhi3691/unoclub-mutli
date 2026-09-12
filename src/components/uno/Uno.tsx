@@ -1,4 +1,6 @@
 "use client";
+import { Icon } from "./Icon";
+
 import { useState } from "react";
 import { MobileNavigation, type MobileView } from "./MobileNavigation";
 import { useUnoGame } from "./useUnoGame";
@@ -39,7 +41,10 @@ export default function Uno() {
         )}
         {room && mobileView !== "play" && yourTurn && (
           <button className="mobile-turn-banner" onClick={() => navigate("play")}>
-            It’s your turn <span>Play a card →</span>
+            It’s your turn{" "}
+            <span>
+              Play a card <Icon name="arrowRight" />
+            </span>
           </button>
         )}
         {room && mobileView !== "play" && (
@@ -51,7 +56,7 @@ export default function Uno() {
               <h1>Your room</h1>
             </div>
             <button onClick={() => navigate("play")}>
-              {yourTurn ? "Your turn — play" : "Back to game"} →
+              {yourTurn ? "Your turn — play" : "Back to game"} <Icon name="arrowRight" />
             </button>
           </div>
         )}
@@ -88,7 +93,7 @@ export default function Uno() {
                   disabled={game.busy || room.players.length < 2}
                   onClick={() => game.act("start")}
                 >
-                  Start game →
+                  Start game <Icon name="arrowRight" />
                 </button>
               ) : (
                 <span>Waiting for the host</span>
@@ -98,7 +103,7 @@ export default function Uno() {
         )}
         {room?.phase === "finished" && mobileView === "play" && (
           <button className="mobile-round-button" onClick={() => navigate("room")}>
-            Next round & room controls →
+            Next round & room controls <Icon name="arrowRight" />
           </button>
         )}
         <div className="game-layout">
