@@ -73,13 +73,22 @@ export function GameTable({
           ) : (
             <>
               <div className="empty-seat">
-                <span>+</span>Your friend
+                <span>
+                  <Icon name="plus" />
+                </span>
+                Your friend
               </div>
               <div className="empty-seat">
-                <span>+</span>Your rival
+                <span>
+                  <Icon name="plus" />
+                </span>
+                Your rival
               </div>
               <div className="empty-seat">
-                <span>+</span>Your wildcard
+                <span>
+                  <Icon name="plus" />
+                </span>
+                Your wildcard
               </div>
             </>
           )}
@@ -205,10 +214,26 @@ export function GameTable({
               <button
                 disabled={!mine || busy}
                 aria-pressed={uno}
-                className={`uno-call ${uno ? "armed" : ""}`}
+                className={`uno-call uno-buzzer ${uno ? "armed" : ""}`}
+                type="button"
+                aria-label={
+                  uno
+                    ? "UNO ready for your next card. Press to cancel"
+                    : "Call UNO with your next card"
+                }
+                title="Press before playing your second-to-last card"
                 onClick={() => setUno(!uno)}
               >
-                UNO! {uno && <Icon name="check" />}
+                <span className="uno-buzzer-label">UNO!</span>
+                <span className="uno-buzzer-state">
+                  {uno ? (
+                    <>
+                      <Icon name="check" /> Ready
+                    </>
+                  ) : (
+                    "Press to call"
+                  )}
+                </span>
               </button>
             )}
             {room?.phase === "playing" && !room.drawnThisTurn && (
@@ -217,6 +242,7 @@ export function GameTable({
                 disabled={!mine || busy}
                 onClick={() => act("draw")}
               >
+                <Icon name="cards" />
                 {room?.pendingDraw ? `Draw ${room.pendingDraw} cards` : "Draw card"}
               </button>
             )}
@@ -226,7 +252,7 @@ export function GameTable({
                 disabled={!mine || busy}
                 onClick={() => act("pass")}
               >
-                Pass
+                Pass <Icon name="arrowRight" />
               </button>
             )}
           </div>

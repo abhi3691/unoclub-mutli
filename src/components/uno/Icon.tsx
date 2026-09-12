@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
 const paths = {
+  cards: (
+    <>
+      <rect x="8" y="3" width="12" height="17" rx="2" />
+      <path d="M5 7H3v14h12v-1M12 8h4m-2-2v4" />
+    </>
+  ),
+  plus: <path d="M12 5v14M5 12h14" />,
   arrowUpRight: <path d="M6 18 18 6M6 6h12v12" />,
   arrowRight: <path d="M4 12h16m-6-6 6 6-6 6" />,
   arrowLeft: <path d="M20 12H4m6-6-6 6 6 6" />,

@@ -79,7 +79,10 @@ export function RoomLobby({
                 disabled={busy || !name.trim()}
                 onClick={() => act("create", { name })}
               >
-                Create private room <span>+</span>
+                Create private room{" "}
+                <span>
+                  <Icon name="plus" />
+                </span>
               </button>
               <div className="join-row">
                 <input
