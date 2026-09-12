@@ -1,6 +1,7 @@
 "use client";
 import { Icon } from "./Icon";
 
+import { useGameSounds } from "./useGameSounds";
 import { useState } from "react";
 import { MobileNavigation, type MobileView } from "./MobileNavigation";
 import { useUnoGame } from "./useUnoGame";
@@ -13,6 +14,7 @@ import { GameDialog } from "./GameDialog";
 export default function Uno() {
   const game = useUnoGame();
   const { room } = game;
+  const sounds = useGameSounds(room);
   const [mobileSelection, setMobileSelection] = useState<{
     code: string | null;
     view: MobileView;
@@ -112,11 +114,23 @@ export default function Uno() {
             room={room}
             busy={game.busy}
             uno={game.uno}
-            setUno={game.setUno}
+            setUno={(value) => {
+              game.setUno(value);
+              if (value) sounds.play("uno");
+            }}
             setRules={game.setRules}
             setWild={game.setWild}
             act={game.act}
           >
+            <button
+              type="button"
+              className="board-sound"
+              aria-pressed={sounds.enabled}
+              onClick={sounds.toggle}
+            >
+              <Icon name={sounds.enabled ? "speaker" : "soundOff"} /> Sound{" "}
+              {sounds.enabled ? "on" : "off"}
+            </button>
             <VoicePanel
               mic={game.mic}
               muted={game.muted}

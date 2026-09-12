@@ -22,6 +22,10 @@ export function GameTable({
   useCardMotion(room);
   const mine = room?.turn === room?.self && room?.phase === "playing";
   const current = room?.players.find((p) => p.id === room.turn);
+  const winnerId = room?.matchOver ? (room.standings[0] ?? room.winner) : room?.winner;
+  const winnerName =
+    room?.players.find((player) => player.id === winnerId)?.name ?? "Player who left";
+  const winnerPlace = room ? room.standings.indexOf(winnerId ?? "") + 1 : 0;
   const preview: Card[] = [
     { id: "a", color: "blue", value: "7" },
     { id: "b", color: "green", value: "reverse" },
@@ -50,6 +54,34 @@ export function GameTable({
       <div className="felt">
         <div className="felt-line" />
         <div className="table-watermark">uno club</div>
+        {room?.phase === "finished" && winnerId && (
+          <section
+            className="winner-announcement"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <span className="winner-trophy">
+              <Icon name="trophy" />
+            </span>
+            <div>
+              <p>{room.matchOver ? "Game complete" : "Round complete"}</p>
+              <h2>
+                {winnerPlace <= 1
+                  ? winnerId === room.self
+                    ? "You win!"
+                    : `${winnerName} wins!`
+                  : `${winnerName} takes place #${winnerPlace}!`}
+              </h2>
+              <span>
+                {winnerId === room.self ? "Nicely played! " : "Well played! "}
+                {room.matchOver
+                  ? "The final standings are below."
+                  : "The remaining players can continue for their places."}
+              </span>
+            </div>
+          </section>
+        )}
         <div className="opponents">
           {room ? (
             room.players
@@ -120,7 +152,7 @@ export function GameTable({
         <div className="table-message" role="status" aria-live="polite">
           {room?.phase === "finished"
             ? room.matchOver
-              ? "Final standings are in!"
+              ? `${winnerName} wins the game!`
               : `${room.players.find((p) => p.id === room.winner)?.name} takes place #${room.standings.length}!`
             : room?.phase === "playing"
               ? mine
@@ -138,8 +170,9 @@ export function GameTable({
           <div className="standings" role="status" aria-live="polite">
             <strong>{room.matchOver ? "Final standings" : "Standings so far"}</strong>
             <ol>
-              {room.standings.map((id) => (
+              {room.standings.map((id, index) => (
                 <li key={id}>
+                  <span className="standing-rank">{index + 1}</span>
                   {room.players.find((x) => x.id === id)?.name ?? "Player left"}
                 </li>
               ))}

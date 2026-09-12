@@ -1,5 +1,20 @@
 import type { ReactNode } from "react";
 const paths = {
+  trophy: (
+    <>
+      <path d="M7 3h10v6a5 5 0 0 1-10 0ZM7 5H3v3a4 4 0 0 0 4 4m10-7h4v3a4 4 0 0 1-4 4m-5 2v5m-4 2h8m-7-2h6" />
+    </>
+  ),
+  speaker: (
+    <>
+      <path d="m11 4-6 5H2v6h3l6 5ZM15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" />
+    </>
+  ),
+  soundOff: (
+    <>
+      <path d="m11 4-6 5H2v6h3l6 5ZM16 9l6 6m0-6-6 6" />
+    </>
+  ),
   cards: (
     <>
       <rect x="8" y="3" width="12" height="17" rx="2" />

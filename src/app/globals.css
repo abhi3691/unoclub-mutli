@@ -2226,3 +2226,112 @@ a {
 .in-game .your-seat {
   padding-bottom: 18px;
 }
+
+.board-sound {
+  position: relative;
+  z-index: 2;
+  display: block;
+  margin: 12px 0 0 auto;
+  min-height: 44px;
+  padding: 9px 14px;
+  border: 1px solid #ffffff40;
+  border-radius: 12px;
+  background: #123c32;
+  color: #f3f6e8;
+  font-size: 12px;
+  font-weight: 700;
+}
+.board-sound .uno-icon {
+  margin-right: 5px;
+}
+.board-sound:focus-visible {
+  outline: 3px solid var(--lime);
+  outline-offset: 3px;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .in-game .board-sound {
+    grid-column: 1 / -1;
+  }
+}
+
+.winner-announcement {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 auto 22px;
+  padding: 20px;
+  max-width: 620px;
+  border: 1px solid #f2d777;
+  border-radius: 18px;
+  background: #fff3ce;
+  color: #284d3b;
+  text-align: left;
+}
+.winner-trophy {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #f2d777;
+  color: #74551b;
+  font-size: 32px;
+}
+.winner-announcement p {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.winner-announcement h2 {
+  margin: 0 0 6px;
+  font-size: clamp(24px, 5vw, 34px);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.winner-announcement div > span {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.standings ol {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+.standings li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.standing-rank {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #ffffff15;
+  font-weight: 700;
+}
+.standings li:first-child .standing-rank {
+  background: #f2d777;
+  color: #493712;
+}
+@media (max-width: 600px) {
+  .winner-announcement {
+    gap: 12px;
+    padding: 16px;
+  }
+  .winner-trophy {
+    width: 44px;
+    height: 44px;
+    font-size: 27px;
+  }
+}
