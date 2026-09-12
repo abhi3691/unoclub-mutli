@@ -1464,3 +1464,625 @@ a {
     display: none !important;
   }
 }
+
+/* A compact, thumb-friendly table on phones; room controls remain below it. */
+.hand-heading {
+  display: none;
+}
+@media (max-width: 760px) {
+  .in-game .topbar {
+    height: 52px;
+  }
+  .in-game main {
+    padding: 8px 8px 0;
+  }
+  .in-game .game-layout {
+    gap: 10px;
+  }
+  .in-game .table-panel {
+    border-radius: 14px;
+  }
+  .in-game .felt {
+    padding: 10px 8px 0;
+  }
+  .in-game .felt-line {
+    border-radius: 26px;
+  }
+  .in-game .table-toolbar {
+    min-height: 44px;
+    padding: 0 10px;
+  }
+  .in-game .opponents {
+    gap: 8px 6px;
+    padding: 6px 0 4px;
+  }
+  .in-game .seat {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    column-gap: 6px;
+    text-align: left;
+    flex-basis: calc(50% - 6px);
+    max-width: none;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background: #183e2b70;
+  }
+  .in-game .seat .avatar {
+    grid-row: span 2;
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    align-self: center;
+  }
+  .in-game .seat strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .in-game .seat small {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  .in-game .active-seat {
+    background: #d5ed931c;
+    outline: 1px solid #d5ed93;
+  }
+  .in-game .active-seat .avatar {
+    outline: none;
+  }
+  .in-game .center-play {
+    margin: 12px 0 10px;
+    gap: 26px;
+  }
+  .in-game .center-play .playing-card {
+    width: 65px;
+    height: 94px;
+    border-width: 4px;
+  }
+  .in-game .center-play .oval {
+    width: 47px;
+    height: 68px;
+    font-size: 32px;
+  }
+  .in-game .center-play small {
+    margin-top: 9px;
+    letter-spacing: 0.5px;
+    font-size: 11px;
+  }
+  .in-game .table-message {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+  .is-your-turn .table-message {
+    color: #ecffce;
+    background: #132f23;
+    border: 1px solid #cce88a88;
+  }
+  .in-game .table-toast {
+    margin: 6px 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    max-height: 34px;
+    overflow: hidden;
+    color: #c5d5c1;
+    text-align: center;
+  }
+  .hand-dock {
+    position: relative;
+    margin: 10px -8px 0;
+    padding: 10px 8px 8px;
+    background: #173c2de8;
+    border-top: 1px solid #aac39c33;
+    border-radius: 16px 16px 0 0;
+  }
+  .hand-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 6px;
+    font-size: 12px;
+    color: #b4c8ae;
+  }
+  .hand-heading strong {
+    font-size: 14px;
+    color: #f0f5e8;
+  }
+  .hand-heading strong span {
+    display: inline-grid;
+    place-items: center;
+    min-width: 24px;
+    height: 24px;
+    margin-left: 5px;
+    border-radius: 20px;
+    background: #ffffff16;
+  }
+  .is-your-turn .hand-heading > span {
+    color: #d5ed93;
+  }
+  .real-hand {
+    min-height: 138px;
+    padding: 12px 6px 10px;
+    margin-top: 0;
+    gap: 8px;
+  }
+  .real-hand .playing-card:nth-child(n) {
+    width: 78px;
+    height: 112px;
+  }
+  .hand-hint {
+    margin: 0 0 6px;
+    font-size: 12px;
+  }
+  .in-game .your-seat {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
+    margin: 0;
+    padding: 6px 4px;
+  }
+  .in-game .your-seat > div:nth-child(2) {
+    min-width: 0;
+  }
+  .in-game .your-seat strong {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .in-game .your-seat small {
+    font-size: 12px;
+  }
+  .in-game .uno-call,
+  .in-game .mobile-draw {
+    min-height: 48px;
+    min-width: 68px;
+    font-size: 15px;
+    padding: 10px 12px;
+  }
+  .in-game .mobile-draw {
+    max-width: 126px;
+  }
+  .in-game .voice-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    padding: 12px;
+  }
+  .in-game .voice-title {
+    min-width: 0;
+    gap: 8px;
+  }
+  .in-game .voice-title h3 {
+    font-size: 14px;
+  }
+  .in-game .voice-title p {
+    margin-top: 4px;
+  }
+  .in-game .voice-controls {
+    margin: 0;
+  }
+  .in-game .voice-controls > span {
+    display: none;
+  }
+  .in-game .voice-card .mute {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+  .in-game .voice-card .privacy {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+  .in-game .bottom-footer {
+    padding: 14px 4px;
+  }
+  .standings {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 12px;
+  }
+}
+@media (max-width: 360px) {
+  .in-game .your-seat {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 5px;
+  }
+  .in-game .uno-call,
+  .in-game .mobile-draw {
+    padding: 8px;
+    min-width: 58px;
+    font-size: 14px;
+  }
+  .in-game .seat {
+    padding: 5px;
+    column-gap: 4px;
+  }
+}
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 950px) {
+  .in-game .felt {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.2fr);
+    gap: 8px 16px;
+    padding: 12px;
+  }
+  .in-game .opponents {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .in-game .center-play {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .in-game .table-message {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .in-game .table-toast {
+    display: none;
+  }
+  .in-game .hand-dock {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    margin: 0;
+    min-width: 0;
+    border-radius: 12px;
+    align-self: center;
+  }
+  .in-game .real-hand {
+    min-width: 0;
+  }
+}
+
+.mobile-navigation,
+.mobile-section-heading,
+.mobile-feedback {
+  display: none;
+}
+@media (max-width: 760px) {
+  .uno-app {
+    padding-bottom: calc(82px + env(safe-area-inset-bottom));
+    min-height: 100dvh;
+  }
+  .mobile-navigation {
+    position: fixed;
+    z-index: 8;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    background: #f8faf5f5;
+    backdrop-filter: blur(16px);
+    border-top: 1px solid #d7dfcf;
+    padding: 8px max(8px, env(safe-area-inset-right))
+      calc(8px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    box-shadow: 0 -6px 24px #142b1710;
+  }
+  .mobile-navigation button {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 52px;
+    padding: 6px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: #65715d;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .mobile-navigation button[aria-pressed="true"] {
+    background: #e4edda;
+    color: #244c35;
+  }
+  .mobile-navigation button:disabled {
+    opacity: 0.4;
+  }
+  .nav-turn-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #d17726;
+    position: absolute;
+    top: 7px;
+    left: calc(50% + 14px);
+  }
+  .uno-app[data-mobile-view="room"] .table-panel,
+  .uno-app[data-mobile-view="voice"] .table-panel {
+    display: none;
+  }
+  .uno-app[data-mobile-view="play"] .lobby-card,
+  .uno-app[data-mobile-view="voice"] .lobby-card {
+    display: none;
+  }
+  .uno-app[data-mobile-view="play"] .voice-card,
+  .uno-app[data-mobile-view="room"] .voice-card {
+    display: none;
+  }
+  .uno-app .side-quote,
+  .uno-app .activity {
+    display: none;
+  }
+  .mobile-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 12px 4px 22px;
+  }
+  .mobile-section-heading small {
+    font-size: 11px;
+    letter-spacing: 0.6px;
+    color: #748168;
+  }
+  .mobile-section-heading h1 {
+    font-size: 25px;
+    margin: 8px 0 0;
+  }
+  .mobile-section-heading button {
+    min-height: 44px;
+    flex-shrink: 0;
+    border: 1px solid #cddcbe;
+    background: #e6efdb;
+    border-radius: 9px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: #294832;
+  }
+  .mobile-feedback {
+    display: block;
+    margin: 0 0 12px;
+    padding: 12px;
+    border: 1px solid #e6ce99;
+    background: #fff2d8;
+    color: #705223;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .lobby-card .notice {
+    display: none;
+  }
+  .in-game[data-mobile-view="room"] .lobby-card {
+    display: block;
+    padding: 20px;
+  }
+  .in-game[data-mobile-view="room"] .lobby-card .eyebrow,
+  .in-game[data-mobile-view="room"] .lobby-card h2,
+  .in-game[data-mobile-view="room"] .lobby-card > p:not(.notice) {
+    display: block;
+  }
+  .in-game[data-mobile-view="room"] .room-code {
+    width: 100%;
+    font-size: 26px;
+    padding: 16px;
+  }
+  .in-game[data-mobile-view="room"] .member-count {
+    margin: 18px 0;
+    font-size: 14px;
+  }
+  .in-game[data-mobile-view="room"] .leave {
+    width: 100%;
+    margin-top: 12px;
+  }
+  .in-game[data-mobile-view="voice"] .voice-card {
+    padding: 20px;
+  }
+  .in-game[data-mobile-view="voice"] .voice-title h3 {
+    font-size: 16px;
+  }
+  .in-game[data-mobile-view="voice"] .voice-title p {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .uno-app[data-mobile-view="play"] .bottom-footer {
+    display: none;
+  }
+  .modal-backdrop {
+    z-index: 12;
+  }
+}
+@media (max-width: 360px) {
+  .mobile-section-heading {
+    flex-wrap: wrap;
+  }
+}
+
+.mobile-welcome,
+.mobile-lobby-actions,
+.mobile-turn-banner,
+.mobile-round-button {
+  display: none;
+}
+@media (max-width: 760px) {
+  .no-room .page-heading {
+    display: none;
+  }
+  .mobile-welcome {
+    display: block;
+    margin: 4px 4px 20px;
+  }
+  .mobile-welcome h1 {
+    font-size: 28px;
+    margin: 0 0 8px;
+  }
+  .mobile-welcome p {
+    color: #68765d;
+    font-size: 15px;
+    line-height: 1.5;
+    margin: 0;
+  }
+  .mobile-lobby-actions {
+    display: grid;
+    gap: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid #cdddbb;
+    border-radius: 14px;
+    background: #edf5e2;
+  }
+  .mobile-lobby-actions strong {
+    font-size: 16px;
+  }
+  .mobile-lobby-actions p {
+    margin: 6px 0 0;
+    font-size: 14px;
+    color: #657458;
+    line-height: 1.4;
+  }
+  .mobile-lobby-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: center;
+  }
+  .mobile-lobby-buttons button {
+    min-height: 48px;
+    padding: 10px;
+    border: 1px solid #c3d1b2;
+    border-radius: 9px;
+    background: #fff;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .mobile-lobby-buttons .deal-button {
+    background: #294e38;
+    color: #fff;
+    border-color: #294e38;
+  }
+  .mobile-lobby-buttons .deal-button:disabled {
+    opacity: 0.45;
+  }
+  .mobile-lobby-buttons span {
+    text-align: center;
+    font-size: 13px;
+    color: #68765d;
+  }
+  .mobile-turn-banner,
+  .mobile-round-button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 48px;
+    border: 1px solid #b8d07e;
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: #d5ed93;
+    font-size: 14px;
+    font-weight: 600;
+    color: #28442b;
+    margin: 0 0 12px;
+  }
+  .mobile-round-button {
+    justify-content: center;
+  }
+  .mobile-navigation button {
+    min-height: 56px;
+  }
+  .real-hand:focus-visible {
+    outline: 2px solid #d5ed93;
+    outline-offset: -2px;
+    border-radius: 8px;
+  }
+  .mobile-section-heading {
+    margin-bottom: 16px;
+  }
+  .modal {
+    overscroll-behavior-y: contain;
+  }
+  .modal::before {
+    content: "";
+    display: block;
+    width: 36px;
+    height: 4px;
+    border-radius: 6px;
+    background: #ced7c5;
+    margin: -12px auto 22px;
+  }
+}
+
+/* Voice stays within reach on the felt, above the player's hand. */
+.board-voice {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px auto;
+  padding: 10px 12px;
+  max-width: 640px;
+  border: 1px solid #ffffff30;
+  border-radius: 14px;
+  background: #123c32e6;
+  color: #fff;
+  text-align: left;
+}
+.board-voice-status {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.board-voice-status strong {
+  font-size: 13px;
+}
+.board-voice-status span {
+  font-size: 11px;
+  color: #d5e6db;
+  overflow-wrap: anywhere;
+}
+.board-voice-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.board-voice-actions button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #ffffff50;
+  border-radius: 10px;
+  background: #f5edda;
+  color: #183b2f;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.board-voice-actions button:focus-visible {
+  outline: 3px solid #f4cf69;
+  outline-offset: 3px;
+}
+.board-voice-actions button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+@media (max-width: 600px) {
+  .board-voice {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+  }
+  .board-voice-actions {
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
+}
+@media (max-height: 540px) and (orientation: landscape) {
+  .in-game .board-voice {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}

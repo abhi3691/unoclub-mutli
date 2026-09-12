@@ -1,4 +1,6 @@
 "use client";
+import { useState } from "react";
+import { MobileNavigation, type MobileView } from "./MobileNavigation";
 import { useUnoGame } from "./useUnoGame";
 import { GameHeader } from "./GameHeader";
 import { GameTable } from "./GameTable";
@@ -9,12 +11,55 @@ import { GameDialog } from "./GameDialog";
 export default function Uno() {
   const game = useUnoGame();
   const { room } = game;
+  const [mobileSelection, setMobileSelection] = useState<{
+    code: string | null;
+    view: MobileView;
+  }>({ code: null, view: "room" });
+  const roomKey = room ? `${room.code}:${room.phase}` : null;
+  const mobileView =
+    mobileSelection.code === roomKey ? mobileSelection.view : room ? "play" : "room";
+  const yourTurn = room?.phase === "playing" && room.turn === room.self;
+  function navigate(view: MobileView) {
+    setMobileSelection({ code: roomKey, view });
+    game.setRules(false);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
   return (
     <div
+      data-mobile-view={mobileView}
       className={`uno-app ${room ? "has-room" : "no-room"} ${room?.phase === "playing" ? "in-game" : ""}`}
     >
       <GameHeader name={game.name} setRules={game.setRules} />
       <main>
+        {!room && (
+          <div className="mobile-welcome">
+            <h1>Ready to play?</h1>
+            <p>Enter a name, then find a table or invite friends.</p>
+          </div>
+        )}
+        {room && mobileView !== "play" && yourTurn && (
+          <button className="mobile-turn-banner" onClick={() => navigate("play")}>
+            It’s your turn <span>Play a card →</span>
+          </button>
+        )}
+        {room && mobileView !== "play" && (
+          <div className="mobile-section-heading">
+            <div>
+              <small>
+                ROOM {room.code} · {room.players.length}/8 PLAYERS
+              </small>
+              <h1>Your room</h1>
+            </div>
+            <button onClick={() => navigate("play")}>
+              {yourTurn ? "Your turn — play" : "Back to game"} →
+            </button>
+          </div>
+        )}
+        {game.error && (
+          <p className="mobile-feedback" role="status">
+            {game.error}
+          </p>
+        )}
         <div className="page-heading">
           <div>
             <div className="eyebrow">GOOD FRIENDS. WILD CARDS.</div>
@@ -25,6 +70,37 @@ export default function Uno() {
             THE CLASSIC, TOGETHER <span>2–8 PLAYERS · LIVE VOICE</span>
           </span>
         </div>
+        {room?.phase === "lobby" && mobileView === "play" && (
+          <section className="mobile-lobby-actions" aria-label="Get your table ready">
+            <div>
+              <strong>
+                {room.players.length < 2
+                  ? "Invite a friend to begin"
+                  : `${room.players.length} players · Ready to deal`}
+              </strong>
+              <p>Start with 2 players. Up to 8 can join.</p>
+            </div>
+            <div className="mobile-lobby-buttons">
+              <button onClick={() => navigate("room")}>Invite friends</button>
+              {room.host === room.self ? (
+                <button
+                  className="deal-button"
+                  disabled={game.busy || room.players.length < 2}
+                  onClick={() => game.act("start")}
+                >
+                  Start game →
+                </button>
+              ) : (
+                <span>Waiting for the host</span>
+              )}
+            </div>
+          </section>
+        )}
+        {room?.phase === "finished" && mobileView === "play" && (
+          <button className="mobile-round-button" onClick={() => navigate("room")}>
+            Next round & room controls →
+          </button>
+        )}
         <div className="game-layout">
           <GameTable
             name={game.name}
@@ -35,7 +111,15 @@ export default function Uno() {
             setRules={game.setRules}
             setWild={game.setWild}
             act={game.act}
-          />
+          >
+            <VoicePanel
+              mic={game.mic}
+              muted={game.muted}
+              voiceStatus={game.voiceStatus}
+              toggleVoice={game.toggleVoice}
+              toggleMute={game.toggleMute}
+            />
+          </GameTable>
           <aside>
             <RoomLobby
               room={room}
@@ -50,13 +134,7 @@ export default function Uno() {
               error={game.error}
               setError={game.setError}
             />
-            <VoicePanel
-              mic={game.mic}
-              muted={game.muted}
-              voiceStatus={game.voiceStatus}
-              toggleVoice={game.toggleVoice}
-              toggleMute={game.toggleMute}
-            />
+
             {room ? (
               <section className="activity">
                 <h3>At the table</h3>
@@ -80,6 +158,14 @@ export default function Uno() {
           <span>Uno-style fan game · Not affiliated with Mattel</span>
         </footer>
       </main>
+      <MobileNavigation
+        view={mobileView}
+        hasRoom={!!room}
+        yourTurn={yourTurn}
+        rulesOpen={game.rules}
+        onNavigate={navigate}
+        onRules={() => game.setRules(true)}
+      />
       <GameDialog
         rules={game.rules}
         wild={game.wild}

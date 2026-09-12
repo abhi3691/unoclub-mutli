@@ -40,7 +40,10 @@ export function useCardMotion(snapshot: Snapshot | null) {
     const hand = document.querySelector<HTMLElement>(".real-hand");
     const pile = document.querySelector<HTMLElement>(".draw-stack .playing-card");
     const discard = document.querySelector<HTMLElement>(".discard .playing-card");
-    if (!hand || !pile || !discard) return;
+    if (!hand || !pile || !discard || !hand.getClientRects().length) {
+      previous.current = null;
+      return;
+    }
     const old = previous.current;
     const cards = new Map<string, { box: Position; face: HTMLElement }>();
     hand.querySelectorAll<HTMLElement>("[data-card-id]").forEach((element) => {

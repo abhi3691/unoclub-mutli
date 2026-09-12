@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { UnoGame } from "./useUnoGame";
 import type { Card } from "@/uno/types";
 import { PlayingCard } from "./PlayingCard";
@@ -5,8 +6,9 @@ import { useCardMotion } from "./useCardMotion";
 type Props = Pick<
   UnoGame,
   "name" | "room" | "busy" | "uno" | "setUno" | "setRules" | "setWild" | "act"
->;
+> & { children?: ReactNode };
 export function GameTable({
+  children,
   name,
   room,
   busy,
@@ -28,7 +30,7 @@ export function GameTable({
   ];
 
   return (
-    <section className="table-panel">
+    <section className={`table-panel ${mine ? "is-your-turn" : ""}`}>
       <div className="table-toolbar">
         <div>
           <span className="live-badge">{room ? "LIVE TABLE" : "THE CLUB TABLE"}</span>
@@ -146,64 +148,83 @@ export function GameTable({
             {room.log.slice(0, 2).reverse().join(" · ")}
           </p>
         )}
-        <div
-          aria-label="Your cards; swipe to see more"
-          className={`hand ${room ? "real-hand" : ""}`}
-        >
-          {(room?.hand.length ? room.hand : !room ? preview : []).map((c) => (
-            <PlayingCard
-              key={c.id}
-              card={c}
-              disabled={
-                !mine || busy || !!(room?.pendingDraw && c.value !== room.top?.value)
-              }
-              onClick={() =>
-                c.color === "wild" ? setWild(c) : act("play", { card: c.id, uno })
-              }
-            />
-          ))}
-        </div>
-        {room?.phase === "playing" && (
-          <p className="hand-hint">Swipe your cards · Tap a card to play</p>
-        )}
-        <div className="your-seat">
-          <div className="you-avatar">{name[0]?.toUpperCase() || "Y"}</div>
-          <div>
+        {room && children}
+        <div className="hand-dock">
+          <div className="hand-heading">
             <strong>
-              {room ? room.players.find((p) => p.id === room.self)?.name : "You"}
+              Your hand <span>{room?.hand.length ?? 5}</span>
             </strong>
-            <small>
-              {room ? `${room.hand.length} cards in hand` : "Your winning streak awaits"}
-            </small>
+            <span>
+              {mine
+                ? "Your turn"
+                : room?.phase === "playing"
+                  ? "Waiting for your turn"
+                  : "Ready when you are"}
+            </span>
+          </div>
+          <div
+            tabIndex={0}
+            role="group"
+            aria-label="Your cards; swipe to see more"
+            className={`hand ${room ? "real-hand" : ""}`}
+          >
+            {(room?.hand.length ? room.hand : !room ? preview : []).map((c) => (
+              <PlayingCard
+                key={c.id}
+                card={c}
+                disabled={
+                  !mine || busy || !!(room?.pendingDraw && c.value !== room.top?.value)
+                }
+                onClick={() =>
+                  c.color === "wild" ? setWild(c) : act("play", { card: c.id, uno })
+                }
+              />
+            ))}
           </div>
           {room?.phase === "playing" && (
-            <button
-              disabled={!mine || busy}
-              aria-pressed={uno}
-              className={`uno-call ${uno ? "armed" : ""}`}
-              onClick={() => setUno(!uno)}
-            >
-              UNO! {uno ? "✓" : ""}
-            </button>
+            <p className="hand-hint">← Swipe to see every card →</p>
           )}
-          {room?.phase === "playing" && !room.drawnThisTurn && (
-            <button
-              className="mobile-draw"
-              disabled={!mine || busy}
-              onClick={() => act("draw")}
-            >
-              {room?.pendingDraw ? `Draw ${room.pendingDraw} cards` : "Draw card"}
-            </button>
-          )}
-          {room?.phase === "playing" && room.drawnThisTurn && (
-            <button
-              className="mobile-draw"
-              disabled={!mine || busy}
-              onClick={() => act("pass")}
-            >
-              Pass
-            </button>
-          )}
+          <div className="your-seat">
+            <div className="you-avatar">{name[0]?.toUpperCase() || "Y"}</div>
+            <div>
+              <strong>
+                {room ? room.players.find((p) => p.id === room.self)?.name : "You"}
+              </strong>
+              <small>
+                {room
+                  ? `${room.hand.length} cards in hand`
+                  : "Your winning streak awaits"}
+              </small>
+            </div>
+            {room?.phase === "playing" && (
+              <button
+                disabled={!mine || busy}
+                aria-pressed={uno}
+                className={`uno-call ${uno ? "armed" : ""}`}
+                onClick={() => setUno(!uno)}
+              >
+                UNO! {uno ? "✓" : ""}
+              </button>
+            )}
+            {room?.phase === "playing" && !room.drawnThisTurn && (
+              <button
+                className="mobile-draw"
+                disabled={!mine || busy}
+                onClick={() => act("draw")}
+              >
+                {room?.pendingDraw ? `Draw ${room.pendingDraw} cards` : "Draw card"}
+              </button>
+            )}
+            {room?.phase === "playing" && room.drawnThisTurn && (
+              <button
+                className="mobile-draw"
+                disabled={!mine || busy}
+                onClick={() => act("pass")}
+              >
+                Pass
+              </button>
+            )}
+          </div>
         </div>
       </div>
       <div className="table-footer">

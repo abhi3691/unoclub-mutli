@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import type { UnoGame } from "./useUnoGame";
 
 type Props = Pick<
@@ -5,35 +6,53 @@ type Props = Pick<
   "mic" | "muted" | "voiceStatus" | "toggleVoice" | "toggleMute"
 >;
 export function VoicePanel({ mic, muted, voiceStatus, toggleVoice, toggleMute }: Props) {
+  const pending = useRef(false);
+  const [changing, setChanging] = useState(false);
+  async function changeVoice() {
+    if (pending.current) return;
+    pending.current = true;
+    setChanging(true);
+    try {
+      await toggleVoice();
+    } finally {
+      pending.current = false;
+      setChanging(false);
+    }
+  }
   return (
-    <section className="voice-card">
-      <div className="voice-title">
-        <span className="voice-icon">♫</span>
-        <div>
-          <h3>Good games sound better.</h3>
-          <p>{mic ? voiceStatus : "Talk, laugh, call out that +4."}</p>
-        </div>
-      </div>
-      <div className="voice-controls">
-        <span>
-          Voice chat <small>{mic ? "ENABLED" : "OPTIONAL"}</small>
+    <section className="board-voice" aria-label="Table voice chat">
+      <div className="board-voice-status">
+        <strong>Voice chat · {mic ? (muted ? "Muted" : "On") : "Off"}</strong>
+        <span role="status">
+          {changing
+            ? "Updating voice…"
+            : mic
+              ? voiceStatus
+              : "Turn on to talk with your table"}
         </span>
+      </div>
+      <div className="board-voice-actions">
+        {mic && (
+          <button
+            type="button"
+            aria-pressed={muted}
+            disabled={changing}
+            onClick={toggleMute}
+          >
+            {muted ? "Unmute mic" : "Mute mic"}
+          </button>
+        )}
         <button
+          type="button"
           role="switch"
+          aria-label="Voice chat"
           aria-checked={mic}
-          aria-label="Enable voice chat"
-          className={`switch ${mic ? "on" : ""}`}
-          onClick={toggleVoice}
+          disabled={changing}
+          onClick={changeVoice}
         >
-          <span />
+          {changing ? "Please wait…" : mic ? "Turn off" : "Turn on voice"}
         </button>
       </div>
-      {mic && (
-        <button className="mute" onClick={toggleMute}>
-          {muted ? "Unmute microphone" : "Mute microphone"}
-        </button>
-      )}
-      <small className="privacy">Your mic is off until you turn it on.</small>
     </section>
   );
 }
