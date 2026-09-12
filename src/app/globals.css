@@ -2335,3 +2335,79 @@ a {
     font-size: 27px;
   }
 }
+
+.leaderboard-card {
+  border: 1px solid #dce2d4;
+  border-radius: 18px;
+  background: var(--paper);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.leaderboard-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  padding: 16px;
+  border: 0;
+  background: #e7eedb;
+  color: var(--green);
+  font-weight: 700;
+  text-align: left;
+}
+.leaderboard-heading span {
+  margin-left: auto;
+  font-size: 11px;
+}
+#leaderboard-content {
+  padding: 14px;
+}
+#leaderboard-content p {
+  font-size: 13px;
+  line-height: 1.5;
+}
+#leaderboard-content .leaderboard-note {
+  font-size: 11px;
+  color: #626c60;
+}
+.leaderboard-refresh {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #ccd7bd;
+  border-radius: 10px;
+  background: white;
+  margin: 8px 0;
+}
+.leaderboard-scroll {
+  overflow-x: auto;
+  max-height: 420px;
+}
+.leaderboard-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+.leaderboard-scroll th,
+.leaderboard-scroll td {
+  padding: 10px 6px;
+  border-bottom: 1px solid #dce2d4;
+}
+.leaderboard-scroll th[scope="row"] {
+  overflow-wrap: anywhere;
+  min-width: 70px;
+}
+.leaderboard-scroll tbody tr:first-child {
+  background: #fff3ce;
+}
+.leaderboard-caption {
+  text-align: left;
+  padding: 8px 0;
+  font-weight: 700;
+}
+@media (max-width: 600px) {
+  .uno-app[data-mobile-view="play"] .leaderboard-card {
+    display: none;
+  }
+}

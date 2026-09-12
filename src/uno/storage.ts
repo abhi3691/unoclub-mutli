@@ -1,4 +1,4 @@
-import type { Transaction } from "firebase-admin/firestore";
+import { FieldValue, type Transaction } from "firebase-admin/firestore";
 import { db } from "@/firebase/admin";
 import { unoAction, type Input, type Room } from "./server";
 
@@ -162,6 +162,28 @@ export async function storedUnoAction(input: Input) {
       if (!finalCode) return result;
 
       const after = store.get(finalCode) ?? null;
+      // Award once when first place is decided; retries and ranking rounds
+      // cannot cross this transition again. Stats commit atomically with the move.
+      if (
+        action.action === "play" &&
+        before?.phase === "playing" &&
+        before.standings.length === 0 &&
+        after?.phase === "finished" &&
+        after.standings.length > 0
+      ) {
+        for (const player of after.players) {
+          tx.set(
+            db().collection("unoLeaderboard").doc(player.uid),
+            {
+              name: player.name,
+              wins: FieldValue.increment(player.id === after.standings[0] ? 1 : 0),
+              games: FieldValue.increment(1),
+              updatedAt: FieldValue.serverTimestamp(),
+            },
+            { merge: true },
+          );
+        }
+      }
       if (before && !after) deleteRoom(tx, finalCode, before);
       else if (after) saveRoom(tx, finalCode, before, after);
       return result;

@@ -5,6 +5,7 @@ import { useGameSounds } from "./useGameSounds";
 import { useState } from "react";
 import { MobileNavigation, type MobileView } from "./MobileNavigation";
 import { useUnoGame } from "./useUnoGame";
+import { Leaderboard } from "./Leaderboard";
 import { GameHeader } from "./GameHeader";
 import { GameTable } from "./GameTable";
 import { RoomLobby } from "./RoomLobby";
@@ -140,6 +141,7 @@ export default function Uno() {
             />
           </GameTable>
           <aside>
+            <Leaderboard />
             <RoomLobby
               room={room}
               name={game.name}
