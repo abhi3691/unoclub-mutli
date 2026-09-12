@@ -14,9 +14,18 @@ type PublicPlayer = {
   voice: boolean;
   seen: number;
   count: number;
+  handRevision?: number;
 };
-type PublicRoom = Omit<Room, "players" | "deck" | "signals"> & { players: PublicPlayer[] };
-type HandDoc = { playerId: string; hand: Room["deck"]; token: string; signals: Room["signals"] };
+type PublicRoom = Omit<Room, "players" | "deck" | "signals"> & {
+  players: PublicPlayer[];
+};
+type HandDoc = {
+  revision?: number;
+  playerId: string;
+  hand: Room["deck"];
+  token: string;
+  signals: Room["signals"];
+};
 
 const rooms = () => db().collection("rooms");
 const handsOf = (code: string) => rooms().doc(code).collection("hands");
@@ -53,13 +62,35 @@ function saveRoom(tx: Transaction, code: string, before: Room | null, room: Room
     voice: p.voice,
     seen: p.seen,
     count: p.hand.length,
+    handRevision: (() => {
+      const previous = before?.players.find((old) => old.id === p.id);
+      const changed =
+        !previous ||
+        JSON.stringify(previous.hand) !== JSON.stringify(p.hand) ||
+        JSON.stringify(before?.signals.filter((sig) => sig.to === p.id).slice(-50)) !==
+          JSON.stringify(signals.filter((sig) => sig.to === p.id).slice(-50));
+      return changed
+        ? (room.revision ?? 0)
+        : ((previous as typeof previous & { handRevision?: number })?.handRevision ?? 0);
+    })(),
   }));
   tx.set(rooms().doc(code), { ...rest, players: publicPlayers });
-  tx.set(secretOf(code), { deck });
+  if (!before || JSON.stringify(before.deck) !== JSON.stringify(deck))
+    tx.set(secretOf(code), { deck });
   for (const p of players) {
     const mine = signals.filter((s) => s.to === p.id).slice(-50);
-    const doc: HandDoc = { playerId: p.id, hand: p.hand, token: p.token, signals: mine };
-    tx.set(handsOf(code).doc(p.uid), doc);
+    const revision = publicPlayers.find((player) => player.id === p.id)!.handRevision;
+    const doc: HandDoc = {
+      revision,
+      playerId: p.id,
+      hand: p.hand,
+      token: p.token,
+      signals: mine,
+    };
+    const previous = before?.players.find((player) => player.id === p.id) as
+      (Room["players"][number] & { handRevision?: number }) | undefined;
+    if (!previous || previous.handRevision !== revision)
+      tx.set(handsOf(code).doc(p.uid), doc);
   }
   // Clean up any players who left/were removed this turn (stale hand docs are
   // harmless security-wise but no reason to keep them around).
@@ -120,7 +151,7 @@ export async function storedUnoAction(input: Input) {
       }
 
       const store = new Map<string, Room>();
-      if (code && before) store.set(code, before);
+      if (code && before) store.set(code, structuredClone(before));
       let result: Awaited<ReturnType<typeof unoAction>>;
       try {
         result = unoAction(action, store);

@@ -3,7 +3,6 @@ import { getApps, initializeApp } from "firebase/app";
 import {
   connectAuthEmulator,
   getAuth,
-  onAuthStateChanged,
   signInAnonymously,
   type User,
 } from "firebase/auth";
@@ -32,16 +31,15 @@ if (process.env.NEXT_PUBLIC_FIREBASE_EMULATOR === "true" && !emulatorsConnected)
 }
 
 /** Resolves once anonymous sign-in completes, giving a stable uid for this browser. */
+let signingIn: Promise<User> | null = null;
 export function ensureSignedIn(): Promise<User> {
-  return new Promise((resolve, reject) => {
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (user) => {
-        unsubscribe();
-        if (user) resolve(user);
-        else signInAnonymously(auth).then((c) => resolve(c.user), reject);
-      },
-      reject,
-    );
-  });
+  if (auth.currentUser) return Promise.resolve(auth.currentUser);
+  if (signingIn) return signingIn;
+  signingIn = auth
+    .authStateReady()
+    .then(async () => auth.currentUser ?? (await signInAnonymously(auth)).user)
+    .finally(() => {
+      signingIn = null;
+    });
+  return signingIn;
 }

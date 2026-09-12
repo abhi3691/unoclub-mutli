@@ -350,7 +350,10 @@ export function unoAction(input: Input, store = rooms) {
       if (c.value === "+2" || c.value === "+4") {
         r.pendingDraw = (r.pendingDraw || 0) + (c.value === "+2" ? 2 : 4);
         log(r, `Draw penalty: ${r.pendingDraw} cards. Stack ${c.value} or draw.`);
-      } else if (c.value === "skip" || (c.value === "reverse" && activePlayers(r).length === 2))
+      } else if (
+        c.value === "skip" ||
+        (c.value === "reverse" && activePlayers(r).length === 2)
+      )
         advance(r);
       if (!p.hand.length) {
         r.standings = [...r.standings, p.id];
@@ -360,7 +363,10 @@ export function unoAction(input: Input, store = rooms) {
         if (remaining.length <= 1) {
           if (remaining.length === 1) r.standings.push(remaining[0].id);
           r.matchOver = true;
-          log(r, `${p.name} takes place #${r.standings.indexOf(p.id) + 1}. Standings are final!`);
+          log(
+            r,
+            `${p.name} takes place #${r.standings.indexOf(p.id) + 1}. Standings are final!`,
+          );
         } else {
           r.matchOver = false;
           log(
@@ -385,7 +391,8 @@ export function unoAction(input: Input, store = rooms) {
   if (r.phase === "playing" && r.players.length === 1) {
     r.phase = "finished";
     r.winner = r.players[0].id;
-    if (!r.standings.includes(r.players[0].id)) r.standings = [...r.standings, r.players[0].id];
+    if (!r.standings.includes(r.players[0].id))
+      r.standings = [...r.standings, r.players[0].id];
     r.matchOver = true;
   }
   return { snapshot: snapshot(r, p, input.after) };

@@ -18,7 +18,14 @@ type PublicDoc = {
   host: string;
   public: boolean;
   phase: Snapshot["phase"];
-  players: { id: string; name: string; count: number; voice: boolean; seen: number }[];
+  players: {
+    id: string;
+    name: string;
+    count: number;
+    voice: boolean;
+    seen: number;
+    handRevision?: number;
+  }[];
   discard: Card[];
   color: Snapshot["color"];
   turn: string;
@@ -28,7 +35,7 @@ type PublicDoc = {
   matchOver: boolean;
   log: string[];
 };
-type HandDoc = { hand: Card[]; signals: Snapshot["signals"] };
+type HandDoc = { revision?: number; hand: Card[]; signals: Snapshot["signals"] };
 type Session = { code: string; token: string; self: string };
 
 function toSnapshot(pub: PublicDoc, hand: HandDoc | null, selfId: string): Snapshot {
@@ -77,7 +84,8 @@ export function useUnoGame() {
     cursor = useRef(0),
     publicPart = useRef<PublicDoc | null>(null),
     handPart = useRef<HandDoc | null>(null),
-    actionPending = useRef(false);
+    actionPending = useRef(false),
+    resync = useRef<() => void>(() => {});
 
   const apply = useCallback((s: Snapshot) => {
     if (latest.current?.code === s.code && latest.current.revision > s.revision) return;
@@ -103,9 +111,14 @@ export function useUnoGame() {
 
   const remerge = useCallback(() => {
     if (!session.current || !publicPart.current) return;
+    if (!handPart.current) return;
+    const own = publicPart.current.players.find((p) => p.id === session.current!.self);
+    if (!own || (own.handRevision ?? 0) !== (handPart.current.revision ?? 0)) return;
     const s = toSnapshot(publicPart.current, handPart.current, session.current.self);
     apply(s);
-    void syncVoice(s);
+    void syncVoice(s).catch(() =>
+      setError("Voice is reconnecting. Game updates are still active."),
+    );
   }, [apply, syncVoice]);
 
   // Restore a saved session once, on mount. sessionStorage isn't available during
@@ -128,25 +141,68 @@ export function useUnoGame() {
   // whenever the active session changes (join/create/leave), replacing polling.
   useEffect(() => {
     if (!session.current) return;
-    const { code } = session.current;
+    const activeSession = session.current;
+    const { code } = activeSession;
     let stopped = false;
     let unsubPublic: (() => void) | undefined;
     let unsubHand: (() => void) | undefined;
-    (async () => {
-      const user = await ensureSignedIn();
-      if (stopped) return;
-      unsubPublic = onSnapshot(doc(db, "rooms", code), (snap) => {
-        if (!snap.exists()) return;
-        publicPart.current = snap.data() as PublicDoc;
-        remerge();
-      });
-      unsubHand = onSnapshot(doc(db, "rooms", code, "hands", user.uid), (snap) => {
-        handPart.current = (snap.data() as HandDoc | undefined) ?? null;
-        remerge();
-      });
-    })().catch(() => setError("Connection interrupted. Please try again."));
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let retryDelay = 1000;
+    const current = () => !stopped && session.current === activeSession;
+    const fail = () => {
+      if (!current() || retry) return;
+      unsubPublic?.();
+      unsubHand?.();
+      setError("Live connection interrupted. Reconnecting…");
+      resync.current();
+      retry = setTimeout(() => {
+        retry = undefined;
+        void subscribe();
+      }, retryDelay);
+      retryDelay = Math.min(retryDelay * 2, 15000);
+    };
+    const subscribe = async () => {
+      try {
+        const user = await ensureSignedIn();
+        if (!current()) return;
+        publicPart.current = null;
+        handPart.current = null;
+        unsubPublic = onSnapshot(
+          doc(db, "rooms", code),
+          (snap) => {
+            if (!current()) return;
+            if (!snap.exists()) {
+              setError(
+                "This room has ended or expired. Leave the table to join another.",
+              );
+              return;
+            }
+            publicPart.current = snap.data() as PublicDoc;
+            remerge();
+          },
+          fail,
+        );
+        unsubHand = onSnapshot(
+          doc(db, "rooms", code, "hands", user.uid),
+          (snap) => {
+            if (!current()) return;
+            if (!snap.exists()) {
+              resync.current();
+              return;
+            }
+            handPart.current = snap.data() as HandDoc;
+            remerge();
+          },
+          fail,
+        );
+      } catch {
+        fail();
+      }
+    };
+    void subscribe();
     return () => {
       stopped = true;
+      clearTimeout(retry);
       unsubPublic?.();
       unsubHand?.();
     };
@@ -163,25 +219,59 @@ export function useUnoGame() {
   // refresh would give you, without needing the reload.
   useEffect(() => {
     if (!session.current) return;
-    const ping = () => {
-      void request("ping")
-        .then((data) => {
-          if (data.snapshot) apply(data.snapshot);
-        })
-        .catch(() => {});
+    const activeSession = session.current;
+    let stopped = false;
+    let inFlight = false;
+    const ping = async () => {
+      if (
+        stopped ||
+        inFlight ||
+        actionPending.current ||
+        session.current !== activeSession ||
+        !navigator.onLine
+      )
+        return;
+      inFlight = true;
+      try {
+        const data = await request("ping");
+        if (stopped || session.current !== activeSession) return;
+        if (data.snapshot) {
+          apply(data.snapshot);
+          await syncVoice(data.snapshot);
+        }
+        setError((message) =>
+          /connection interrupted|reconnecting|offline/i.test(message) ? "" : message,
+        );
+      } catch {
+        if (!stopped) setError("Connection interrupted. Reconnecting…");
+      } finally {
+        inFlight = false;
+      }
     };
     const onVisible = () => {
-      if (document.visibilityState === "visible") ping();
+      if (document.visibilityState === "visible") void ping();
     };
-    const interval = setInterval(ping, 30000);
+    const offline = () =>
+      setError("You’re offline. Reconnecting when your network returns…");
+    resync.current = () => {
+      void ping();
+    };
+    void ping();
+    const interval = setInterval(ping, 10000);
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", ping);
+    window.addEventListener("focus", onVisible);
+    window.addEventListener("online", onVisible);
+    window.addEventListener("offline", offline);
     return () => {
+      stopped = true;
+      resync.current = () => {};
       clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", ping);
+      window.removeEventListener("focus", onVisible);
+      window.removeEventListener("online", onVisible);
+      window.removeEventListener("offline", offline);
     };
-  }, [sessionVersion, request, apply]);
+  }, [sessionVersion, request, apply, syncVoice]);
 
   useEffect(() => () => stopVoice(), [stopVoice]);
 
@@ -194,7 +284,11 @@ export function useUnoGame() {
       await ensureSignedIn();
       const data = await request(action, extra);
       if (data.token && data.snapshot) {
-        session.current = { code: data.snapshot.code, token: data.token, self: data.snapshot.self };
+        session.current = {
+          code: data.snapshot.code,
+          token: data.token,
+          self: data.snapshot.self,
+        };
         sessionStorage.setItem("uno-session", JSON.stringify(session.current));
         publicPart.current = null;
         handPart.current = null;
@@ -223,6 +317,7 @@ export function useUnoGame() {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       actionPending.current = false;
+      resync.current();
       setBusy(false);
     }
   }

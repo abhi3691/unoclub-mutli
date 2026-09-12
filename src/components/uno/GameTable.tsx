@@ -125,7 +125,9 @@ export function GameTable({
             <strong>{room.matchOver ? "Final standings" : "Standings so far"}</strong>
             <ol>
               {room.standings.map((id) => (
-                <li key={id}>{room.players.find((x) => x.id === id)?.name ?? "Player left"}</li>
+                <li key={id}>
+                  {room.players.find((x) => x.id === id)?.name ?? "Player left"}
+                </li>
               ))}
             </ol>
             {!room.matchOver && (
@@ -194,7 +196,11 @@ export function GameTable({
             </button>
           )}
           {room?.phase === "playing" && room.drawnThisTurn && (
-            <button className="mobile-draw" disabled={!mine || busy} onClick={() => act("pass")}>
+            <button
+              className="mobile-draw"
+              disabled={!mine || busy}
+              onClick={() => act("pass")}
+            >
               Pass
             </button>
           )}

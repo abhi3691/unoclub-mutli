@@ -10,7 +10,11 @@ export function useVoiceConnection(request: RoomRequest, cursor: RefObject<numbe
     peers = useRef(new Map<string, RTCPeerConnection>()),
     audios = useRef(new Map<string, HTMLAudioElement>()),
     pendingIce = useRef(new Map<string, RTCIceCandidateInit[]>());
+  const voiceQueue = useRef(Promise.resolve());
+  const voiceGeneration = useRef(0);
   const stopVoice = useCallback(() => {
+    voiceGeneration.current++;
+    pendingIce.current.clear();
     stream.current?.getTracks().forEach((t) => t.stop());
     stream.current = null;
     peers.current.forEach((p) => p.close());
@@ -75,8 +79,9 @@ export function useVoiceConnection(request: RoomRequest, cursor: RefObject<numbe
     [request],
   );
 
-  const syncVoice = useCallback(
-    async (s: Snapshot) => {
+  const processVoice = useCallback(
+    async (s: Snapshot, generation: number) => {
+      if (generation !== voiceGeneration.current) return;
       for (const [id, pc] of peers.current)
         if (!s.players.some((p) => p.id === id && p.voice)) {
           pc.close();
@@ -91,6 +96,7 @@ export function useVoiceConnection(request: RoomRequest, cursor: RefObject<numbe
         // triggering endless renegotiation instead of a stable connection.
         const unseen = s.signals.filter((sig) => sig.id > cursor.current);
         for (const sig of unseen) {
+          if (generation !== voiceGeneration.current) return;
           cursor.current = Math.max(cursor.current, sig.id);
           const pc = peers.current.get(sig.from) ?? connect(sig.from);
           if (sig.data.description) {
@@ -126,6 +132,17 @@ export function useVoiceConnection(request: RoomRequest, cursor: RefObject<numbe
       }
     },
     [connect, request, cursor],
+  );
+  const syncVoice = useCallback(
+    (s: Snapshot) => {
+      const generation = voiceGeneration.current;
+      const next = voiceQueue.current
+        .catch(() => {})
+        .then(() => processVoice(s, generation));
+      voiceQueue.current = next.catch(() => {});
+      return next;
+    },
+    [processVoice],
   );
   async function startVoice() {
     stream.current = await navigator.mediaDevices.getUserMedia({ audio: true });

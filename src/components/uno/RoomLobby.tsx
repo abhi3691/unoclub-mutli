@@ -146,7 +146,11 @@ export function RoomLobby({
                 <span>↗</span>
               </button>
               {room.phase === "finished" && !room.matchOver && (
-                <button className="skip" disabled={busy} onClick={() => act("skipRanking")}>
+                <button
+                  className="skip"
+                  disabled={busy}
+                  onClick={() => act("skipRanking")}
+                >
                   Skip ranking &amp; end game
                 </button>
               )}
