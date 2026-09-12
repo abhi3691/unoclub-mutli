@@ -18,6 +18,7 @@ export type RoomRequest = (
 ) => Promise<{ token?: string; snapshot?: Snapshot; left?: boolean }>;
 
 type PublicDoc = {
+  unoWarning?: Snapshot["unoWarning"];
   revision?: number;
   pendingDraw: number;
   drawnThisTurn: boolean;
@@ -47,6 +48,7 @@ type Session = { code: string; token: string; self: string };
 
 function toSnapshot(pub: PublicDoc, hand: HandDoc | null, selfId: string): Snapshot {
   return {
+    unoWarning: pub.unoWarning ?? null,
     revision: pub.revision ?? 0,
     pendingDraw: pub.pendingDraw,
     drawnThisTurn: pub.turn === selfId && pub.drawnThisTurn,

@@ -12,7 +12,6 @@ type Props = Pick<
   | "setTab"
   | "busy"
   | "act"
-  | "error"
   | "setError"
 >;
 export function RoomLobby({
@@ -25,7 +24,6 @@ export function RoomLobby({
   setTab,
   busy,
   act,
-  error,
   setError,
 }: Props) {
   return (
@@ -181,11 +179,6 @@ export function RoomLobby({
             Leave table
           </button>
         </>
-      )}
-      {error && (
-        <p role="status" className="notice">
-          {error}
-        </p>
       )}
     </section>
   );

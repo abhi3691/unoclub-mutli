@@ -11,6 +11,7 @@ type Player = {
   seen: number;
 };
 export type Room = {
+  unoWarning?: Snapshot["unoWarning"];
   revision?: number;
   pendingDraw: number;
   drawnThisTurn: boolean;
@@ -122,6 +123,7 @@ function snapshot(r: Room, p: Player, after = 0): Snapshot {
   r.revision = (r.revision ?? 0) + 1;
   return {
     revision: r.revision,
+    unoWarning: r.unoWarning ?? null,
     pendingDraw: r.pendingDraw ?? 0,
     drawnThisTurn: r.turn === p.id && r.drawnThisTurn,
     code: r.code,
@@ -347,6 +349,7 @@ export function unoAction(input: Input, store = rooms) {
       log(r, `${p.name} played ${c.color} ${c.value}`);
       if (p.hand.length === 1 && !input.uno) {
         draw(r, p, 2);
+        r.unoWarning = { id: randomBytes(12).toString("hex"), name: p.name, at: now };
         log(r, `${p.name} forgot UNO! +2 cards`);
       } else if (p.hand.length === 1) log(r, `${p.name} called UNO!`);
       if (c.value === "reverse") r.direction *= -1;

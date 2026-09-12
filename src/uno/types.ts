@@ -7,6 +7,7 @@ export type Signal = {
   data: { description?: RTCSessionDescriptionInit; candidate?: RTCIceCandidateInit };
 };
 export type Snapshot = {
+  unoWarning?: { id: string; name: string; at: number } | null;
   revision: number;
   pendingDraw: number;
   drawnThisTurn: boolean;

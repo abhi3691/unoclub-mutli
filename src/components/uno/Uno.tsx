@@ -1,4 +1,5 @@
 "use client";
+import { FeedbackToast } from "./FeedbackToast";
 import { Icon } from "./Icon";
 
 import { useGameSounds } from "./useGameSounds";
@@ -34,6 +35,13 @@ export default function Uno() {
       data-mobile-view={mobileView}
       className={`uno-app ${room ? "has-room" : "no-room"} ${room?.phase === "playing" ? "in-game" : ""}`}
     >
+      {game.error && (
+        <FeedbackToast
+          key={game.error}
+          message={game.error}
+          onDismiss={() => game.setError("")}
+        />
+      )}
       <GameHeader name={game.name} setRules={game.setRules} />
       <main>
         {!room && (
@@ -62,11 +70,6 @@ export default function Uno() {
               {yourTurn ? "Your turn — play" : "Back to game"} <Icon name="arrowRight" />
             </button>
           </div>
-        )}
-        {game.error && (
-          <p className="mobile-feedback" role="status">
-            {game.error}
-          </p>
         )}
         <div className="page-heading">
           <div>
@@ -152,7 +155,6 @@ export default function Uno() {
               setTab={game.setTab}
               busy={game.busy}
               act={game.act}
-              error={game.error}
               setError={game.setError}
             />
 

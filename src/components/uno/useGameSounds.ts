@@ -18,6 +18,8 @@ export function useGameSounds(room: Snapshot | null) {
   const enabledRef = useRef(true);
   const context = useRef<AudioContext | null>(null);
   const previous = useRef<Snapshot | null>(null);
+  const interacted = useRef(false);
+  const spoken = useRef<string | null>(null);
   const active = useRef(new Set<OscillatorNode>());
 
   const play = useCallback((sound: Sound) => {
@@ -54,6 +56,7 @@ export function useGameSounds(room: Snapshot | null) {
       /* Storage can be unavailable in private browsing. */
     }
     const unlock = () => {
+      interacted.current = true;
       if (!enabledRef.current) return;
       try {
         context.current ??= new AudioContext();
@@ -64,6 +67,7 @@ export function useGameSounds(room: Snapshot | null) {
       }
     };
     const silence = () => {
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
       for (const oscillator of active.current) oscillator.stop();
     };
     const visibility = () => {
@@ -86,6 +90,26 @@ export function useGameSounds(room: Snapshot | null) {
     const old = previous.current;
     previous.current = room;
     if (!room || !old || old.code !== room.code || room.revision <= old.revision) return;
+    const warning = room.unoWarning;
+    if (warning && warning.id !== old.unoWarning?.id && warning.id !== spoken.current) {
+      spoken.current = warning.id;
+      if (
+        enabledRef.current &&
+        interacted.current &&
+        !document.hidden &&
+        Date.now() - warning.at < 15000 &&
+        "speechSynthesis" in window
+      ) {
+        const message = new SpeechSynthesisUtterance(
+          `${warning.name} forgot to call UNO. Draw two cards.`,
+        );
+        message.lang = "en-US";
+        message.rate = 0.95;
+        message.volume = 0.8;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(message);
+      }
+    }
     if (room.phase === "finished" && old.phase !== "finished") play("finish");
     else if (room.phase === "playing" && old.phase !== "playing") play("deal");
     else if (room.phase === "playing") {
@@ -108,6 +132,7 @@ export function useGameSounds(room: Snapshot | null) {
       localStorage.setItem("uno-sounds", next ? "on" : "off");
     } catch {}
     if (!next) {
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
       for (const oscillator of active.current) oscillator.stop();
       return;
     }
