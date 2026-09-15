@@ -15,6 +15,16 @@ Every mutation (play, draw, start, join, …) runs inside a Firestore transactio
 
 For local development without a real Firebase project, run the Firestore + Auth emulators (`firebase emulators:start --only firestore,auth`, requires a JDK) and set `FIRESTORE_EMULATOR_HOST=127.0.0.1:8080`, `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`, and `NEXT_PUBLIC_FIREBASE_EMULATOR=true`.
 
+## Push notifications
+
+Groups get a browser push when a member schedules a game. This needs VAPID keys, set the same way as the Firebase vars above — in Vercel *and* locally in `.env`:
+
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` — generate with `npx web-push generate-vapid-keys`.
+- `VAPID_SUBJECT` — a `mailto:` address for push services to contact if there's an issue.
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` — same value as `VAPID_PUBLIC_KEY`, exposed to the browser so it can subscribe.
+
+Since `NEXT_PUBLIC_*` vars are baked into the client bundle at build time, adding them in Vercel only takes effect on the next deploy — if "Enable game notifications" reports "Push notifications aren't configured yet", either these aren't set in Vercel yet, or they were added after the last build and a redeploy is needed. Locally, restart `npm run dev` after editing `.env`.
+
 ## Voice
 
 Voice uses browser WebRTC with opt-in microphone permission, individual mute, and authenticated room signaling. HTTPS (or localhost) is required. Google STUN is configured for direct peer discovery. A production TURN relay must be configured for restrictive NAT/firewall networks. Browser-to-browser audio has not been verified across external networks.
