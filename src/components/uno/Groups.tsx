@@ -189,6 +189,12 @@ export function Groups({ name }: Props) {
               Create
             </button>
           </div>
+          {!name.trim() && (
+            <p className="groups-note">
+              Enter your display name above (in “Pull up a chair”) to create or join a
+              group.
+            </p>
+          )}
           <button
             className="groups-refresh"
             disabled={loading}
