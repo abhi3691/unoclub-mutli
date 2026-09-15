@@ -1,3 +1,4 @@
+import { TurnAnnouncement } from "./TurnAnnouncement";
 import { Icon } from "./Icon";
 import type { ReactNode } from "react";
 import type { UnoGame } from "./useUnoGame";
@@ -26,6 +27,19 @@ export function GameTable({
   const winnerName =
     room?.players.find((player) => player.id === winnerId)?.name ?? "Player who left";
   const winnerPlace = room ? room.standings.indexOf(winnerId ?? "") + 1 : 0;
+  const activePlayers =
+    room?.players.filter((player) => !room.standings.includes(player.id)) ?? [];
+  const turnIndex = activePlayers.findIndex((player) => player.id === room?.turn);
+  const turnOrder =
+    turnIndex < 0
+      ? []
+      : activePlayers.map(
+          (_, index) =>
+            activePlayers[
+              (turnIndex + index * (room?.direction ?? 1) + activePlayers.length) %
+                activePlayers.length
+            ],
+        );
   const preview: Card[] = [
     { id: "a", color: "blue", value: "7" },
     { id: "b", color: "green", value: "reverse" },
@@ -36,6 +50,12 @@ export function GameTable({
 
   return (
     <section className={`table-panel ${mine ? "is-your-turn" : ""}`}>
+      {room?.phase === "playing" && (
+        <TurnAnnouncement
+          key={`${room.code}:${room.turn}:${room.pendingDraw}:${room.drawnThisTurn}`}
+          room={room}
+        />
+      )}
       <div className="table-toolbar">
         <div>
           <span className="live-badge">{room ? "LIVE TABLE" : "THE CLUB TABLE"}</span>
@@ -54,6 +74,76 @@ export function GameTable({
       <div className="felt">
         <div className="felt-line" />
         <div className="table-watermark">uno club</div>
+        {room?.phase === "playing" && (
+          <div className="board-turn-controls">
+            <div className="turn-summary" role="status">
+              <strong>
+                {mine ? "Your turn" : `${current?.name ?? "Player"}'s turn`}
+              </strong>
+              <span>
+                Next:{" "}
+                {turnOrder[1]?.id === room.self
+                  ? "You"
+                  : (turnOrder[1]?.name ?? "Waiting")}
+              </span>
+              <small>
+                {uno
+                  ? "UNO ready. Play your card."
+                  : "Have 2 cards? Call UNO before playing."}
+              </small>
+              <button className="turn-help" onClick={() => setRules(true)}>
+                <Icon name="info" /> How to play
+              </button>
+            </div>
+            {room?.phase === "playing" && (
+              <button
+                disabled={!mine || busy}
+                aria-pressed={uno}
+                className={`uno-call uno-buzzer ${uno ? "armed" : ""}`}
+                type="button"
+                aria-label={
+                  uno
+                    ? "UNO ready for your next card. Press to cancel"
+                    : "Call UNO with your next card"
+                }
+                title="Press before playing your second-to-last card"
+                onClick={() => setUno(!uno)}
+              >
+                <span className="uno-buzzer-label">UNO!</span>
+                <span className="uno-buzzer-state">
+                  {uno ? (
+                    <>
+                      <Icon name="check" /> Ready
+                    </>
+                  ) : (
+                    "Press to call"
+                  )}
+                </span>
+              </button>
+            )}
+          </div>
+        )}
+        {room?.phase === "playing" && (
+          <nav className="turn-flow" aria-label="Player turn order">
+            <p>
+              {room.direction === 1 ? "Clockwise" : "Counterclockwise"} · Special cards
+              can change who goes next
+            </p>
+            <ol>
+              {turnOrder.map((player, index) => (
+                <li key={player.id} aria-current={index === 0 ? "step" : undefined}>
+                  {index > 0 && <Icon name="arrowRight" />}
+                  <span>
+                    <small>
+                      {index === 0 ? "NOW" : index === 1 ? "NEXT" : `THEN ${index}`}
+                    </small>
+                    <b>{player.id === room.self ? "You" : player.name}</b>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )}
         {room?.phase === "finished" && winnerId && (
           <section
             className="winner-announcement"
@@ -243,32 +333,6 @@ export function GameTable({
                   : "Your winning streak awaits"}
               </small>
             </div>
-            {room?.phase === "playing" && (
-              <button
-                disabled={!mine || busy}
-                aria-pressed={uno}
-                className={`uno-call uno-buzzer ${uno ? "armed" : ""}`}
-                type="button"
-                aria-label={
-                  uno
-                    ? "UNO ready for your next card. Press to cancel"
-                    : "Call UNO with your next card"
-                }
-                title="Press before playing your second-to-last card"
-                onClick={() => setUno(!uno)}
-              >
-                <span className="uno-buzzer-label">UNO!</span>
-                <span className="uno-buzzer-state">
-                  {uno ? (
-                    <>
-                      <Icon name="check" /> Ready
-                    </>
-                  ) : (
-                    "Press to call"
-                  )}
-                </span>
-              </button>
-            )}
             {room?.phase === "playing" && !room.drawnThisTurn && (
               <button
                 className="mobile-draw"

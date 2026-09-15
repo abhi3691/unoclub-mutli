@@ -2486,3 +2486,722 @@ a {
     animation-duration: 1ms;
   }
 }
+
+.board-turn-controls {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+  border: 1px solid #ffffff30;
+  border-radius: 16px;
+  background: #123c32;
+}
+.turn-summary {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: #f6f7f2;
+}
+.turn-summary strong {
+  font-size: 20px;
+  color: var(--lime);
+  overflow-wrap: anywhere;
+}
+.turn-summary span {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.turn-summary small {
+  font-size: 12px;
+}
+.turn-help {
+  justify-self: start;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: #e2edce;
+  text-decoration: underline;
+  font-size: 12px;
+  padding: 6px 0;
+}
+.turn-flow {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 18px;
+  color: #e2edce;
+}
+.turn-flow p {
+  font-size: 11px;
+  margin: 0 0 8px;
+}
+.turn-flow ol {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  list-style: none;
+  padding: 0 0 6px;
+  margin: 0;
+}
+.turn-flow li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.turn-flow li span {
+  display: grid;
+  gap: 3px;
+  padding: 8px 12px;
+  border: 1px solid #ffffff30;
+  border-radius: 10px;
+  max-width: 150px;
+}
+.turn-flow li[aria-current] span {
+  background: var(--lime);
+  color: var(--green);
+}
+.turn-flow small {
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+.turn-flow b {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.game-tutorial {
+  padding-left: 22px;
+}
+.game-tutorial li {
+  margin: 12px 0;
+  line-height: 1.55;
+  font-size: 14px;
+}
+.in-game .your-seat {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .in-game .board-turn-controls,
+  .in-game .turn-flow {
+    grid-column: 1 / -1;
+  }
+  .in-game .opponents,
+  .in-game .center-play,
+  .in-game .table-message,
+  .in-game .hand-dock {
+    grid-row: auto;
+  }
+}
+
+.turn-announcement {
+  position: fixed;
+  z-index: 11;
+  left: 50%;
+  top: 20%;
+  transform: translateX(-50%);
+  width: min(640px, calc(100% - 32px));
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 24px;
+  border: 2px solid var(--lime);
+  border-radius: 22px;
+  background: #163d30f5;
+  color: #fff;
+  box-shadow: 0 15px 50px #0005;
+  pointer-events: none;
+  animation: turn-announce 3.5s ease both;
+}
+.turn-announcement > .uno-icon {
+  font-size: 38px;
+  color: var(--lime);
+}
+.turn-announcement strong {
+  display: block;
+  font-size: clamp(24px, 5vw, 36px);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.turn-announcement p {
+  margin: 8px 0 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+@keyframes turn-announce {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -18px);
+  }
+  8%,
+  88% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+}
+@media (max-width: 600px) {
+  .turn-announcement {
+    top: 12%;
+    padding: 20px;
+    gap: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .turn-announcement {
+    animation: none;
+  }
+}
+
+/* Keep the active desktop table in the viewport; long room lists scroll locally. */
+@media (min-width: 761px) and (min-height: 650px) {
+  .in-game {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  .in-game .topbar {
+    height: 60px;
+    flex-shrink: 0;
+  }
+  .in-game main {
+    width: 100%;
+    max-width: none;
+    padding: 12px 20px;
+    margin: 0;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .in-game .page-heading,
+  .in-game .bottom-footer,
+  .in-game .table-footer {
+    display: none;
+  }
+  .in-game .game-layout {
+    flex: 1;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 14px;
+  }
+  .in-game .game-layout > aside {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .in-game .table-panel {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .in-game .table-toolbar {
+    padding: 10px 16px;
+    flex-shrink: 0;
+  }
+  .in-game .felt {
+    flex: 1;
+    min-height: 0;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: 10px 14px;
+    overflow-y: auto;
+  }
+  .in-game .board-turn-controls {
+    grid-column: 1;
+    grid-row: 1;
+    padding: 8px 12px;
+    margin: 0;
+  }
+  .in-game .board-turn-controls .uno-buzzer {
+    width: 68px;
+    height: 68px;
+    min-width: 68px;
+    min-height: 68px;
+    margin: 0 0 5px;
+  }
+  .in-game .turn-summary strong {
+    font-size: 18px;
+  }
+  .in-game .turn-help {
+    min-height: 32px;
+    padding: 2px 0;
+  }
+  .in-game .turn-flow {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    align-self: center;
+    min-width: 0;
+  }
+  .in-game .opponents {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-height: 0;
+    gap: 8px 16px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 4px;
+  }
+  .in-game .seat {
+    flex-shrink: 0;
+  }
+  .in-game .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+  .in-game .center-play {
+    grid-column: 1;
+    grid-row: 3;
+    margin: 0;
+    align-self: center;
+    gap: 16px;
+  }
+  .in-game .center-play small {
+    margin-top: 8px;
+  }
+  .in-game .hand-dock {
+    grid-column: 2;
+    grid-row: 3;
+    align-self: center;
+    min-width: 0;
+    margin: 0;
+    padding: 10px;
+  }
+  .in-game .real-hand {
+    min-height: 155px;
+    margin: 0;
+    padding: 14px 8px;
+  }
+  .in-game .real-hand .playing-card {
+    width: 76px;
+    height: 112px;
+    margin: 0 4px 0 0;
+    transform: none;
+  }
+  .in-game .real-hand .oval {
+    width: 52px;
+    height: 78px;
+    font-size: 36px;
+  }
+  .in-game .your-seat {
+    margin: 0;
+    padding: 4px 0;
+    gap: 8px;
+  }
+  .in-game .your-seat .mobile-draw {
+    display: block;
+  }
+  .in-game .hand-hint {
+    display: block;
+    margin: 4px 0;
+    font-size: 11px;
+  }
+  .in-game .table-message,
+  .in-game .table-toast {
+    display: none;
+  }
+  .in-game .board-voice {
+    grid-column: 2;
+    grid-row: 4;
+    width: 100%;
+    margin: 0;
+    padding: 8px;
+  }
+  .in-game .board-sound {
+    grid-column: 1;
+    grid-row: 4;
+    margin: 0;
+    justify-self: start;
+    align-self: center;
+  }
+}
+@media (min-width: 761px) and (max-width: 1050px) and (min-height: 650px) {
+  .in-game .game-layout {
+    grid-template-columns: minmax(0, 1fr) 230px;
+  }
+  .in-game main {
+    padding: 8px;
+  }
+  .in-game .felt {
+    gap: 8px;
+  }
+  .in-game .board-voice {
+    flex-wrap: wrap;
+  }
+}
+/* Compact phone controls, while preserving scrolling on small/zoomed screens. */
+@media (max-width: 760px) {
+  .in-game .board-turn-controls {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+  .in-game .turn-summary strong {
+    font-size: 18px;
+  }
+  .in-game .turn-summary small {
+    font-size: 11px;
+  }
+  .in-game .turn-help {
+    min-height: 32px;
+    padding: 2px 0;
+  }
+  .in-game .turn-flow {
+    margin-bottom: 8px;
+  }
+  .in-game .turn-flow li span {
+    padding: 5px 9px;
+  }
+  .in-game .opponents {
+    margin-bottom: 6px;
+  }
+  .in-game .center-play {
+    margin: 8px 0;
+  }
+  .in-game .board-voice {
+    margin: 6px 0;
+    padding: 8px 10px;
+  }
+  .in-game .board-sound {
+    margin-top: 6px;
+  }
+  .in-game .table-message,
+  .in-game .table-toast {
+    display: none;
+  }
+}
+
+/* The welcome screen also fits a desktop window, before a room is joined. */
+@media (min-width: 761px) and (min-height: 650px) {
+  .no-room {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  .no-room .topbar {
+    height: 60px;
+    flex-shrink: 0;
+  }
+  .no-room main {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+  }
+  .no-room .page-heading {
+    margin-bottom: 14px;
+    flex-shrink: 0;
+  }
+  .no-room .page-heading h1 {
+    font-size: clamp(24px, 2.5vw, 34px);
+    margin: 8px 0;
+  }
+  .no-room .page-heading p {
+    font-size: 14px;
+  }
+  .no-room .game-layout {
+    flex: 1;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 18px;
+  }
+  .no-room .game-layout > aside {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .no-room .table-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .no-room .table-toolbar {
+    padding: 10px 16px;
+  }
+  .no-room .felt {
+    min-height: 0;
+    flex: 1;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    gap: 8px;
+  }
+  .no-room .opponents {
+    min-height: 0;
+    gap: 32px;
+  }
+  .no-room .empty-seat > span {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 4px;
+  }
+  .no-room .center-play {
+    margin: 0;
+    gap: 20px;
+  }
+  .no-room .center-play small {
+    margin-top: 8px;
+  }
+  .no-room .playing-card {
+    width: 65px;
+    height: 96px;
+    border-width: 4px;
+  }
+  .no-room .playing-card .oval {
+    width: 44px;
+    height: 68px;
+    font-size: 32px;
+  }
+  .no-room .back .oval {
+    font-size: 19px;
+  }
+  .no-room .hand-dock {
+    margin: 0;
+  }
+  .no-room .hand {
+    min-height: 104px;
+    margin: 0;
+    padding: 0 12px;
+  }
+  .no-room .your-seat {
+    margin-top: 8px;
+  }
+  .no-room .table-message {
+    margin: 0 auto;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  .no-room .table-footer {
+    padding: 10px 14px;
+    font-size: 10px;
+  }
+  .no-room .bottom-footer,
+  .no-room .side-quote,
+  .no-room .lobby-note {
+    display: none;
+  }
+  .no-room .lobby-card {
+    padding: 18px;
+  }
+  .no-room .lobby-card h2 {
+    font-size: 24px;
+    margin: 10px 0;
+  }
+  .no-room .lobby-card p {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .no-room .leaderboard-heading {
+    min-height: 48px;
+    padding: 12px;
+  }
+}
+@media (min-width: 761px) and (max-width: 1000px) and (min-height: 650px) {
+  .no-room main {
+    padding: 12px;
+  }
+  .no-room .game-layout {
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 12px;
+  }
+  .no-room .edition {
+    display: none;
+  }
+}
+
+.tutorial-modal {
+  width: min(720px, calc(100vw - 24px));
+  max-width: 720px;
+}
+.tutorial-chapters {
+  display: flex;
+  gap: 6px;
+  margin: 14px 0;
+  overflow-x: auto;
+  padding: 4px;
+}
+.tutorial-chapters button {
+  min-width: 44px;
+  height: 44px;
+  border: 1px solid #ccd7bd;
+  border-radius: 50%;
+  background: #eef1e7;
+}
+.tutorial-chapters button[aria-current] {
+  background: var(--green);
+  color: #fff;
+}
+.tutorial-stage {
+  position: relative;
+  min-height: 230px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  background: radial-gradient(ellipse at top, #38634e, #173c2d);
+  border-radius: 18px;
+  color: white;
+  overflow: hidden;
+}
+.tutorial-scene-label {
+  color: #d5ed93;
+  font-size: 13px;
+  text-align: center;
+}
+.tutorial-cards {
+  display: flex;
+  gap: 18px;
+}
+.tutorial-demo-card {
+  animation: tutorial-card-in 0.8s ease both;
+}
+.tutorial-result {
+  font-size: 16px;
+  text-align: center;
+  animation: tutorial-reveal 1.5s ease both;
+}
+.tutorial-caption h3 {
+  font-size: 20px;
+  margin: 18px 0 8px;
+}
+.tutorial-caption p {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 8px 0;
+}
+.tutorial-caption .tutorial-tip {
+  border-left: 3px solid #adc675;
+  padding: 8px 12px;
+  background: #edf2e5;
+  color: #40543b;
+  font-size: 13px;
+}
+.tutorial-playback {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 16px;
+}
+.tutorial-playback button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid #c9d4bc;
+  border-radius: 12px;
+  background: #f6f7f2;
+}
+.tutorial-playback button:nth-child(2) {
+  background: var(--green);
+  color: #fff;
+}
+.tutorial-playback button:disabled {
+  opacity: 0.4;
+}
+.tutorial-duration {
+  display: block;
+  font-size: 11px;
+  line-height: 1.4;
+  margin-top: 10px;
+  color: #64715f;
+}
+.tutorial-uno,
+.tutorial-trophy {
+  position: absolute;
+  right: 16px;
+  top: 60px;
+  background: #f2d777;
+  color: #a32121;
+  padding: 12px;
+  border-radius: 50%;
+  font-weight: 900;
+  animation: tutorial-reveal 1.2s ease both;
+}
+.tutorial-trophy {
+  font-size: 32px;
+}
+@keyframes tutorial-card-in {
+  from {
+    opacity: 0;
+    transform: translate(-40px, 20px) rotate(-12deg);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0);
+  }
+}
+@keyframes tutorial-reveal {
+  0%,
+  45% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 600px) {
+  .tutorial-modal {
+    padding: 22px 16px;
+  }
+  .tutorial-stage {
+    min-height: 210px;
+  }
+  .tutorial-cards .playing-card {
+    width: 66px;
+    height: 98px;
+  }
+  .tutorial-cards .oval {
+    width: 44px;
+    height: 66px;
+    font-size: 30px;
+  }
+  .tutorial-playback button {
+    padding: 10px 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-demo-card,
+  .tutorial-result,
+  .tutorial-uno,
+  .tutorial-trophy {
+    animation: none;
+  }
+}
+
+/* Reserve space inside the horizontal scroller for raised cards and shadows. */
+.uno-app .hand.real-hand {
+  padding-top: 30px;
+  padding-bottom: 20px;
+  padding-inline: 16px;
+  scroll-padding-inline: 16px;
+  min-height: max-content;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+@media (hover: hover) {
+  .uno-app .real-hand .playing-card:not(:disabled):hover,
+  .uno-app .real-hand .playing-card:focus-visible {
+    transform: translateY(-12px);
+    z-index: 4;
+  }
+}
+@media (hover: none) {
+  .uno-app .real-hand .playing-card:not(:disabled):hover {
+    transform: none;
+  }
+}

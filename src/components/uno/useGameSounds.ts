@@ -55,6 +55,7 @@ export function useGameSounds(room: Snapshot | null) {
     } catch {
       /* Storage can be unavailable in private browsing. */
     }
+    if ("speechSynthesis" in window) window.speechSynthesis.getVoices();
     const unlock = () => {
       interacted.current = true;
       if (!enabledRef.current) return;
@@ -101,11 +102,25 @@ export function useGameSounds(room: Snapshot | null) {
         "speechSynthesis" in window
       ) {
         const message = new SpeechSynthesisUtterance(
-          `${warning.name} forgot to call UNO. Draw two cards.`,
+          `${warning.name} forgot to call Uno. Two penalty cards added.`,
         );
-        message.lang = "en-US";
-        message.rate = 0.95;
-        message.volume = 0.8;
+        const voices = window.speechSynthesis.getVoices();
+        const english = voices.filter((voice) => /^en[-_]/i.test(voice.lang));
+        // Browser voices have no gender field; prefer known female voice names.
+        const voice =
+          english.find((voice) =>
+            /samantha|karen|moira|tessa|ava|susan|zira|aria|jenny|female/i.test(
+              voice.name,
+            ),
+          ) ??
+          english.find((voice) => /Google US English/i.test(voice.name)) ??
+          english.find((voice) => voice.default) ??
+          english[0];
+        if (voice) message.voice = voice;
+        message.lang = voice?.lang ?? "en-US";
+        message.rate = 0.88;
+        message.pitch = 1;
+        message.volume = 1;
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(message);
       }
