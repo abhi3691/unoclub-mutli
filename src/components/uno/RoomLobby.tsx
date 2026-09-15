@@ -33,6 +33,13 @@ export function RoomLobby({
   const [title, setTitle] = useState("");
   const [groupId, setGroupId] = useState("");
   const [myGroups, setMyGroups] = useState<{ id: string; name: string }[]>([]);
+  const [now, setNow] = useState(() => Date.now());
+  const waitingForSchedule = !!room?.scheduledFor && now < room.scheduledFor;
+  useEffect(() => {
+    if (!room?.scheduledFor || Date.now() >= room.scheduledFor) return;
+    const interval = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(interval);
+  }, [room?.scheduledFor]);
   useEffect(() => {
     if (room) return;
     let cancelled = false;
@@ -174,14 +181,19 @@ export function RoomLobby({
               <button
                 className="primary"
                 disabled={busy || !name.trim() || !scheduledAt}
-                onClick={() =>
-                  act("create", {
+                onClick={async () => {
+                  const data = await act("create", {
                     name,
                     scheduledFor: new Date(scheduledAt).getTime(),
                     title: title.trim() || undefined,
                     groupId: groupId || undefined,
-                  })
-                }
+                  });
+                  if (data?.scheduled) {
+                    setScheduledAt("");
+                    setTitle("");
+                    setGroupId("");
+                  }
+                }}
               >
                 Schedule public game{" "}
                 <span>
@@ -238,16 +250,24 @@ export function RoomLobby({
           <div className="member-count">{room.players.length}/8 players seated</div>
           {room.host === room.self && room.phase !== "playing" ? (
             <>
+              {waitingForSchedule && (
+                <p className="scheduled-note">
+                  <Icon name="calendar" /> Dealing opens at{" "}
+                  {formatSchedule(room.scheduledFor!)}.
+                </p>
+              )}
               <button
                 className="primary"
-                disabled={busy || room.players.length < 2}
+                disabled={busy || room.players.length < 2 || waitingForSchedule}
                 onClick={() => act("start")}
               >
-                {room.phase === "finished"
-                  ? room.matchOver
-                    ? "Play again"
-                    : "Deal next round"
-                  : "Deal the cards"}{" "}
+                {waitingForSchedule
+                  ? "Not time yet"
+                  : room.phase === "finished"
+                    ? room.matchOver
+                      ? "Play again"
+                      : "Deal next round"
+                    : "Deal the cards"}{" "}
                 <span>
                   <Icon name="arrowUpRight" />
                 </span>
@@ -264,11 +284,13 @@ export function RoomLobby({
             </>
           ) : (
             <p className="helper">
-              {room.phase === "lobby"
-                ? "The host will start when everyone is ready."
-                : room.phase === "finished" && !room.matchOver
-                  ? "Waiting for the host to deal the next round, or skip ranking."
-                  : "Match the active color or the top card’s symbol."}
+              {waitingForSchedule
+                ? `The host can deal once the scheduled time (${formatSchedule(room.scheduledFor!)}) arrives.`
+                : room.phase === "lobby"
+                  ? "The host will start when everyone is ready."
+                  : room.phase === "finished" && !room.matchOver
+                    ? "Waiting for the host to deal the next round, or skip ranking."
+                    : "Match the active color or the top card’s symbol."}
             </p>
           )}
           <button className="leave" onClick={() => act("leave")} disabled={busy}>

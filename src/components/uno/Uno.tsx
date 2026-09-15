@@ -1,9 +1,10 @@
 "use client";
 import { FeedbackToast } from "./FeedbackToast";
 import { Icon } from "./Icon";
+import { formatSchedule } from "./schedule";
 
 import { useGameSounds } from "./useGameSounds";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MobileNavigation, type MobileView } from "./MobileNavigation";
 import { useUnoGame } from "./useUnoGame";
 import { Leaderboard } from "./Leaderboard";
@@ -27,6 +28,13 @@ export default function Uno() {
   const mobileView =
     mobileSelection.code === roomKey ? mobileSelection.view : room ? "play" : "room";
   const yourTurn = room?.phase === "playing" && room.turn === room.self;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!room?.scheduledFor || now >= room.scheduledFor) return;
+    const interval = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(interval);
+  }, [room?.scheduledFor, now]);
+  const waitingForSchedule = !!room?.scheduledFor && now < room.scheduledFor;
   function navigate(view: MobileView) {
     setMobileSelection({ code: roomKey, view });
     game.setRules(false);
@@ -87,9 +95,11 @@ export default function Uno() {
           <section className="mobile-lobby-actions" aria-label="Get your table ready">
             <div>
               <strong>
-                {room.players.length < 2
-                  ? "Invite a friend to begin"
-                  : `${room.players.length} players · Ready to deal`}
+                {waitingForSchedule
+                  ? `Starts ${formatSchedule(room.scheduledFor!)}`
+                  : room.players.length < 2
+                    ? "Invite a friend to begin"
+                    : `${room.players.length} players · Ready to deal`}
               </strong>
               <p>Start with 2 players. Up to 8 can join.</p>
             </div>
@@ -98,10 +108,10 @@ export default function Uno() {
               {room.host === room.self ? (
                 <button
                   className="deal-button"
-                  disabled={game.busy || room.players.length < 2}
+                  disabled={game.busy || room.players.length < 2 || waitingForSchedule}
                   onClick={() => game.act("start")}
                 >
-                  Start game <Icon name="arrowRight" />
+                  {waitingForSchedule ? "Not time yet" : "Start game"} <Icon name="arrowRight" />
                 </button>
               ) : (
                 <span>Waiting for the host</span>
@@ -146,9 +156,6 @@ export default function Uno() {
             />
           </GameTable>
           <aside>
-            <Leaderboard />
-            <Community name={game.name} busy={game.busy} act={game.act} />
-            <Groups name={game.name} />
             <RoomLobby
               room={room}
               name={game.name}
@@ -161,6 +168,9 @@ export default function Uno() {
               act={game.act}
               setError={game.setError}
             />
+            <Leaderboard />
+            <Community name={game.name} busy={game.busy} act={game.act} />
+            <Groups name={game.name} />
 
             {room ? (
               <section className="activity">

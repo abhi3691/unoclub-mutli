@@ -4,6 +4,8 @@ import { Icon } from "./Icon";
 import { formatSchedule } from "./schedule";
 import type { UnoGame } from "./useUnoGame";
 
+const NOW_TICK_MS = 5000;
+
 type Game = {
   code: string;
   title: string | null;
@@ -21,6 +23,12 @@ export function Community({ name, busy, act }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [refresh, setRefresh] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!open) return;
+    const interval = setInterval(() => setNow(Date.now()), NOW_TICK_MS);
+    return () => clearInterval(interval);
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     const controller = new AbortController();
@@ -72,24 +80,32 @@ export function Community({ name, busy, act }: Props) {
             <p>No community games scheduled yet. Host one from “Pull up a chair”.</p>
           ) : (
             <ul className="community-list">
-              {games.map((g) => (
-                <li key={g.code}>
-                  <div>
-                    <strong>{g.title || "Game night"}</strong>
-                    <span>{formatSchedule(g.scheduledFor)}</span>
-                    <span>
-                      Hosted by {g.hostName} · {g.playerCount}/8 seated
-                      {g.groupName ? ` · ${g.groupName}` : ""}
-                    </span>
-                  </div>
-                  <button
-                    disabled={busy || !name.trim()}
-                    onClick={() => act("join", { name, code: g.code })}
-                  >
-                    Join <Icon name="arrowUpRight" />
-                  </button>
-                </li>
-              ))}
+              {games.map((g) => {
+                const notYetOpen = now < g.scheduledFor;
+                return (
+                  <li key={g.code}>
+                    <div>
+                      <strong>{g.title || "Game night"}</strong>
+                      <span>{formatSchedule(g.scheduledFor)}</span>
+                      <span>
+                        Hosted by {g.hostName} · {g.playerCount}/8 seated
+                        {g.groupName ? ` · ${g.groupName}` : ""}
+                      </span>
+                      {notYetOpen && (
+                        <span className="community-wait">
+                          Opens for joining at {formatSchedule(g.scheduledFor)}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      disabled={busy || !name.trim() || notYetOpen}
+                      onClick={() => act("join", { name, code: g.code })}
+                    >
+                      {notYetOpen ? "Not yet" : "Join"} <Icon name="arrowUpRight" />
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
           {!name.trim() && games.length > 0 && (

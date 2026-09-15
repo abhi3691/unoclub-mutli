@@ -1,4 +1,5 @@
 import type { RoomAction } from "./schema";
+import { formatSchedule } from "../components/uno/schedule";
 import { randomBytes, randomInt } from "node:crypto";
 import type { Card, Color, Signal, Snapshot } from "./types";
 type Player = {
@@ -19,6 +20,8 @@ export type Room = {
   host: string;
   public: boolean;
   scheduledFor: number | null;
+  /** Display name of whoever scheduled this game, shown before anyone has joined. */
+  pendingHost: string | null;
   title: string | null;
   groupId: string | null;
   phase: Snapshot["phase"];
@@ -171,7 +174,8 @@ export function unoAction(input: Input, store = rooms) {
           x.public &&
           x.phase === "lobby" &&
           x.players.length < 8 &&
-          now - x.updated < 20000,
+          now - x.updated < 20000 &&
+          (!x.scheduledFor || now >= x.scheduledFor),
       );
     if (!r) {
       if (rooms.size >= 200) fail("All tables are busy. Try again shortly.");
@@ -188,6 +192,7 @@ export function unoAction(input: Input, store = rooms) {
         host: "",
         public: input.action === "quick" || !!input.public || !!input.scheduledFor,
         scheduledFor: input.scheduledFor ?? null,
+        pendingHost: input.scheduledFor ? input.name?.trim().slice(0, 20) || "Host" : null,
         title: input.title?.trim().slice(0, 40) || null,
         groupId: input.scheduledFor ? (input.groupId ?? null) : null,
         phase: "lobby",
@@ -211,9 +216,15 @@ export function unoAction(input: Input, store = rooms) {
   // Leaving is idempotent: an expired room already has no seat to remove.
   if (!r && input.action === "leave") return { left: true };
   if (!r) fail("Room not found. Check your six-character code.");
+  // A scheduled game starts empty: nobody, including whoever scheduled it, is
+  // seated until it opens — everyone joins the same way once the time arrives.
+  if (input.action === "create" && r.scheduledFor)
+    return { scheduled: true, code: r.code, scheduledFor: r.scheduledFor, title: r.title };
   if (["create", "quick", "join"].includes(input.action)) {
     if (!input.uid) fail("Not signed in yet. Please try again in a moment.");
     if (r.phase !== "lobby") fail("This round has started. Join another table.");
+    if (input.action === "join" && r.scheduledFor && now < r.scheduledFor)
+      fail(`This game opens for joining at ${formatSchedule(r.scheduledFor)}.`);
     if (r.players.length >= 8) fail("This room is full (8 players).");
     if (r.players.some((x) => x.uid === input.uid))
       fail("You're already seated at this table.");
@@ -264,6 +275,8 @@ export function unoAction(input: Input, store = rooms) {
   if (input.action === "start") {
     if (p.id !== r.host) fail("Only the host can deal.");
     if (r.phase === "playing") fail("A round is already in progress.");
+    if (r.scheduledFor && now < r.scheduledFor)
+      fail(`This game is scheduled for ${formatSchedule(r.scheduledFor)}. Come back then to deal.`);
     // A finished round with standings still open (not skipped, not everyone
     // ranked yet) continues the match: only the still-unranked players are
     // dealt back in to decide the remaining placements. Anything else — the

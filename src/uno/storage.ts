@@ -135,7 +135,7 @@ export async function listCommunityGames(): Promise<CommunityGame[]> {
     return {
       code: data.code,
       title: data.title ?? null,
-      hostName: host?.name ?? "Host",
+      hostName: host?.name ?? data.pendingHost ?? "Host",
       scheduledFor: data.scheduledFor ?? 0,
       playerCount: data.players.length,
       groupName: data.groupId ? (groupNames.get(data.groupId) ?? null) : null,
@@ -196,7 +196,7 @@ export async function storedUnoAction(input: Input) {
       } catch (e) {
         throw new GameRuleError(e instanceof Error ? e.message : "Invalid move");
       }
-      const finalCode = result.snapshot?.code ?? code;
+      const finalCode = result.snapshot?.code ?? ("code" in result ? result.code : undefined) ?? code;
       if (!finalCode) return result;
 
       const after = store.get(finalCode) ?? null;

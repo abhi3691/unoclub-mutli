@@ -11,11 +11,20 @@ import {
   listenerFailure,
 } from "@/uno/connection-errors";
 import { useVoiceConnection } from "./useVoiceConnection";
+import { formatSchedule } from "./schedule";
 
 export type RoomRequest = (
   action: RoomAction,
   extra?: Record<string, unknown>,
-) => Promise<{ token?: string; snapshot?: Snapshot; left?: boolean }>;
+) => Promise<{
+  token?: string;
+  snapshot?: Snapshot;
+  left?: boolean;
+  scheduled?: boolean;
+  code?: string;
+  scheduledFor?: number;
+  title?: string | null;
+}>;
 
 type PublicDoc = {
   unoWarning?: Snapshot["unoWarning"];
@@ -378,11 +387,17 @@ export function useUnoGame() {
       // Apply the direct response immediately for snappy feedback; the Firestore
       // listener corroborates (or supersedes) it a moment later.
       if (data.snapshot) apply(data.snapshot);
+      if (data.scheduled) {
+        setError(
+          `Game scheduled for ${formatSchedule(data.scheduledFor!)}! Share code ${data.code} — everyone (you included) can join once it's time.`,
+        );
+      }
       if (action === "play") {
         setWild(null);
         setUno(false);
       }
       if (action === "leave") clearSession();
+      return data;
     } catch (e) {
       if (isExpiredSession(e)) clearSession();
       setError(e instanceof Error ? e.message : "Something went wrong");

@@ -13,8 +13,8 @@ export async function POST(request: Request) {
     if (body.length > 20000) throw new Error("Request too large");
     const input = roomActionSchema.parse(JSON.parse(body));
     const result = await storedUnoAction(input);
-    if (input.action === "create" && input.groupId && result.snapshot?.scheduledFor) {
-      const { title, scheduledFor } = result.snapshot;
+    if (input.action === "create" && input.groupId && "scheduled" in result && result.scheduled) {
+      const { title, scheduledFor } = result;
       try {
         await notifyGroupMembers(input.groupId, input.uid ?? "", {
           title: "New game scheduled",

@@ -2492,6 +2492,15 @@ a {
   font-size: 12px;
   font-weight: 600;
 }
+.community-list li button:disabled {
+  background: #eef1e8;
+  border-color: #dce2d4;
+  color: #8a9085;
+  cursor: not-allowed;
+}
+.community-wait {
+  color: #8a7a3f;
+}
 .scheduled-note {
   display: flex;
   align-items: center;
