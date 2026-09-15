@@ -70,6 +70,12 @@ const paths = {
   ),
   reverse: <path d="M4 8h16l-5-5M20 16H4l5 5" />,
   wild: <path d="m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3Z" />,
+  calendar: (
+    <>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 export function Icon({ name }: { name: keyof typeof paths }) {
   return (

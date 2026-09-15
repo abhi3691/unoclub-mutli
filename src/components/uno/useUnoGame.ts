@@ -25,6 +25,9 @@ type PublicDoc = {
   code: string;
   host: string;
   public: boolean;
+  scheduledFor: number | null;
+  title: string | null;
+  groupId: string | null;
   phase: Snapshot["phase"];
   players: {
     id: string;
@@ -56,6 +59,9 @@ function toSnapshot(pub: PublicDoc, hand: HandDoc | null, selfId: string): Snaps
     self: selfId,
     host: pub.host,
     public: pub.public,
+    scheduledFor: pub.scheduledFor ?? null,
+    title: pub.title ?? null,
+    groupId: pub.groupId ?? null,
     phase: pub.phase,
     players: pub.players.map((p) => ({
       id: p.id,

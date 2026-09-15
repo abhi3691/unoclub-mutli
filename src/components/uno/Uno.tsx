@@ -7,6 +7,8 @@ import { useState } from "react";
 import { MobileNavigation, type MobileView } from "./MobileNavigation";
 import { useUnoGame } from "./useUnoGame";
 import { Leaderboard } from "./Leaderboard";
+import { Community } from "./Community";
+import { Groups } from "./Groups";
 import { GameHeader } from "./GameHeader";
 import { GameTable } from "./GameTable";
 import { RoomLobby } from "./RoomLobby";
@@ -145,6 +147,8 @@ export default function Uno() {
           </GameTable>
           <aside>
             <Leaderboard />
+            <Community name={game.name} busy={game.busy} act={game.act} />
+            <Groups name={game.name} />
             <RoomLobby
               room={room}
               name={game.name}

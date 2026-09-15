@@ -18,6 +18,9 @@ export type Room = {
   code: string;
   host: string;
   public: boolean;
+  scheduledFor: number | null;
+  title: string | null;
+  groupId: string | null;
   phase: Snapshot["phase"];
   players: Player[];
   deck: Card[];
@@ -47,6 +50,9 @@ export type Input = {
   token?: string;
   uid?: string;
   public?: boolean;
+  scheduledFor?: number;
+  title?: string;
+  groupId?: string;
   card?: string;
   color?: Color;
   uno?: boolean;
@@ -130,6 +136,9 @@ function snapshot(r: Room, p: Player, after = 0): Snapshot {
     self: p.id,
     host: r.host,
     public: r.public,
+    scheduledFor: r.scheduledFor ?? null,
+    title: r.title ?? null,
+    groupId: r.groupId ?? null,
     phase: r.phase,
     players: r.players.map((x) => ({
       id: x.id,
@@ -166,6 +175,8 @@ export function unoAction(input: Input, store = rooms) {
       );
     if (!r) {
       if (rooms.size >= 200) fail("All tables are busy. Try again shortly.");
+      if (input.scheduledFor !== undefined && input.scheduledFor < now - 60000)
+        fail("Pick a date and time in the future.");
       let code: string;
       do {
         code = randomBytes(3).toString("hex").toUpperCase();
@@ -175,7 +186,10 @@ export function unoAction(input: Input, store = rooms) {
         drawnThisTurn: false,
         code,
         host: "",
-        public: input.action === "quick" || !!input.public,
+        public: input.action === "quick" || !!input.public || !!input.scheduledFor,
+        scheduledFor: input.scheduledFor ?? null,
+        title: input.title?.trim().slice(0, 40) || null,
+        groupId: input.scheduledFor ? (input.groupId ?? null) : null,
         phase: "lobby",
         players: [],
         deck: [],

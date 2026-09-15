@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
 import { Icon } from "./Icon";
+import { formatSchedule, minScheduleInput } from "./schedule";
+import { ensureSignedIn } from "@/firebase/client";
 import type { UnoGame } from "./useUnoGame";
 
 type Props = Pick<
@@ -26,6 +29,31 @@ export function RoomLobby({
   act,
   setError,
 }: Props) {
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [title, setTitle] = useState("");
+  const [groupId, setGroupId] = useState("");
+  const [myGroups, setMyGroups] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    if (room) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const user = await ensureSignedIn();
+        const response = await fetch(
+          `/api/uno/groups/mine?uid=${encodeURIComponent(user.uid)}`,
+          { cache: "no-store" },
+        );
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!cancelled) setMyGroups(data.groups ?? []);
+      } catch {
+        // Group selection is optional; leave the list empty on failure.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [room]);
   return (
     <section className="lobby-card">
       <div className="eyebrow">{room ? "YOU’RE AT THE TABLE" : "PULL UP A CHAIR"}</div>
@@ -46,13 +74,13 @@ export function RoomLobby({
             onChange={(e) => setName(e.target.value)}
           />
           <div className="tabs">
-            {["quick", "friends"].map((t) => (
+            {["quick", "friends", "schedule"].map((t) => (
               <button
                 key={t}
                 className={tab === t ? "selected" : ""}
                 onClick={() => setTab(t)}
               >
-                {t === "quick" ? "Quick play" : "With friends"}
+                {t === "quick" ? "Quick play" : t === "friends" ? "With friends" : "Schedule"}
               </button>
             ))}
           </div>
@@ -70,7 +98,7 @@ export function RoomLobby({
               </button>
               <p className="helper">Join a public table. New friends included.</p>
             </>
-          ) : (
+          ) : tab === "friends" ? (
             <>
               <button
                 className="primary"
@@ -102,6 +130,68 @@ export function RoomLobby({
                 </button>
               </div>
             </>
+          ) : (
+            <>
+              <label className="field-label" htmlFor="schedule-date">
+                DATE &amp; TIME
+              </label>
+              <input
+                id="schedule-date"
+                type="datetime-local"
+                min={minScheduleInput()}
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+              />
+              <label className="field-label" htmlFor="schedule-title">
+                GAME TITLE (OPTIONAL)
+              </label>
+              <input
+                id="schedule-title"
+                maxLength={40}
+                placeholder="Friday game night"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+              {myGroups.length > 0 && (
+                <>
+                  <label className="field-label" htmlFor="schedule-group">
+                    NOTIFY A GROUP (OPTIONAL)
+                  </label>
+                  <select
+                    id="schedule-group"
+                    value={groupId}
+                    onChange={(e) => setGroupId(e.target.value)}
+                  >
+                    <option value="">No group</option>
+                    {myGroups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+              <button
+                className="primary"
+                disabled={busy || !name.trim() || !scheduledAt}
+                onClick={() =>
+                  act("create", {
+                    name,
+                    scheduledFor: new Date(scheduledAt).getTime(),
+                    title: title.trim() || undefined,
+                    groupId: groupId || undefined,
+                  })
+                }
+              >
+                Schedule public game{" "}
+                <span>
+                  <Icon name="calendar" />
+                </span>
+              </button>
+              <p className="helper">
+                Anyone can find and join this game from Community games.
+              </p>
+            </>
           )}
           <div className="divider" />
           <div className="lobby-note">
@@ -125,6 +215,12 @@ export function RoomLobby({
               ? "Public table · Anyone can join"
               : "Private table · Invite your people"}
           </p>
+          {room.scheduledFor && (
+            <p className="scheduled-note">
+              <Icon name="calendar" /> {room.title || "Game night"} · scheduled for{" "}
+              {formatSchedule(room.scheduledFor)}
+            </p>
+          )}
           <button
             className="room-code"
             onClick={() =>

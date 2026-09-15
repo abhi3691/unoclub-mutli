@@ -113,7 +113,7 @@ export function GameTutorial() {
     const timer = setTimeout(() => {
       if (step === lessons.length - 1) setPlaying(false);
       else setStep((value) => value + 1);
-    }, 10000);
+    }, 4000);
     return () => clearTimeout(timer);
   }, [playing, step]);
   function jump(index: number) {
@@ -189,7 +189,7 @@ export function GameTutorial() {
         </button>
       </div>
       <small className="tutorial-duration">
-        Step {step + 1} of {lessons.length} · Auto-play: 10 seconds per step. Pause to
+        Step {step + 1} of {lessons.length} · Auto-play: 4 seconds per step. Pause to
         read at your pace.
       </small>
     </div>

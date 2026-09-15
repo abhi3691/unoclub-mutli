@@ -105,6 +105,44 @@ function deleteRoom(tx: Transaction, code: string, before: Room) {
   for (const p of before.players) tx.delete(handsOf(code).doc(p.uid));
 }
 
+export type CommunityGame = {
+  code: string;
+  title: string | null;
+  hostName: string;
+  scheduledFor: number;
+  playerCount: number;
+  groupName: string | null;
+};
+export async function listCommunityGames(): Promise<CommunityGame[]> {
+  const cutoff = Date.now() - 15 * 60 * 1000; // still list a game briefly after its start time
+  const snap = await rooms()
+    .where("public", "==", true)
+    .where("phase", "==", "lobby")
+    .where("scheduledFor", ">", cutoff)
+    .orderBy("scheduledFor", "asc")
+    .limit(50)
+    .get();
+  const rows = snap.docs.map((doc) => doc.data() as PublicRoom);
+  const groupIds = [...new Set(rows.map((r) => r.groupId).filter((id): id is string => !!id))];
+  const groupNames = new Map<string, string>();
+  if (groupIds.length) {
+    const groupSnaps = await db().getAll(...groupIds.map((id) => db().collection("groups").doc(id)));
+    for (const groupSnap of groupSnaps)
+      if (groupSnap.exists) groupNames.set(groupSnap.id, String(groupSnap.data()!.name));
+  }
+  return rows.map((data) => {
+    const host = data.players.find((p) => p.id === data.host);
+    return {
+      code: data.code,
+      title: data.title ?? null,
+      hostName: host?.name ?? "Host",
+      scheduledFor: data.scheduledFor ?? 0,
+      playerCount: data.players.length,
+      groupName: data.groupId ? (groupNames.get(data.groupId) ?? null) : null,
+    };
+  });
+}
+
 async function findQuickMatchCandidate(): Promise<string | null> {
   const cutoff = Date.now() - 20000;
   const snap = await rooms()
@@ -164,12 +202,14 @@ export async function storedUnoAction(input: Input) {
       const after = store.get(finalCode) ?? null;
       // Award once when first place is decided; retries and ranking rounds
       // cannot cross this transition again. Stats commit atomically with the move.
+      // Only public (quick-play) rooms count toward the leaderboard.
       if (
         action.action === "play" &&
         before?.phase === "playing" &&
         before.standings.length === 0 &&
         after?.phase === "finished" &&
-        after.standings.length > 0
+        after.standings.length > 0 &&
+        after.public
       ) {
         for (const player of after.players) {
           tx.set(

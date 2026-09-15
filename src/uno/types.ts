@@ -15,6 +15,9 @@ export type Snapshot = {
   self: string;
   host: string;
   public: boolean;
+  scheduledFor: number | null;
+  title: string | null;
+  groupId: string | null;
   phase: "lobby" | "playing" | "finished";
   players: {
     id: string;

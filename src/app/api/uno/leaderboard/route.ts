@@ -19,7 +19,8 @@ export async function GET() {
       };
     });
     return Response.json({ players }, { headers: { "Cache-Control": "no-store" } });
-  } catch {
+  } catch (error) {
+    console.error("Failed to load leaderboard:", error);
     return Response.json(
       { error: "Leaderboard unavailable. Please try again." },
       { status: 503 },

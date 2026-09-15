@@ -1,18 +1,30 @@
 import { roomActionSchema } from "@/uno/schema";
 import { z } from "zod";
 import { storedUnoAction, StorageError } from "@/uno/storage";
+import { checkOrigin } from "@/uno/http";
+import { notifyGroupMembers } from "@/uno/push";
+import { formatSchedule } from "@/components/uno/schedule";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
-  const origin = request.headers.get("origin");
-  if (
-    origin &&
-    new URL(origin).host !== (request.headers.get("host") ?? new URL(request.url).host)
-  )
-    return Response.json({ error: "Invalid origin" }, { status: 403 });
+  const originError = checkOrigin(request);
+  if (originError) return originError;
   try {
     const body = await request.text();
     if (body.length > 20000) throw new Error("Request too large");
-    const result = await storedUnoAction(roomActionSchema.parse(JSON.parse(body)));
+    const input = roomActionSchema.parse(JSON.parse(body));
+    const result = await storedUnoAction(input);
+    if (input.action === "create" && input.groupId && result.snapshot?.scheduledFor) {
+      const { title, scheduledFor } = result.snapshot;
+      try {
+        await notifyGroupMembers(input.groupId, input.uid ?? "", {
+          title: "New game scheduled",
+          body: `${title || "Game night"} · ${formatSchedule(scheduledFor)}`,
+          url: "/",
+        });
+      } catch (error) {
+        console.error("Group notify failed:", error);
+      }
+    }
     return Response.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     return Response.json(
