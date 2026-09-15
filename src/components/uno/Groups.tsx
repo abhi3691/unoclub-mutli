@@ -96,7 +96,14 @@ export function Groups({ name }: Props) {
   }
 
   async function createGroup() {
-    if (!name.trim() || !newGroupName.trim()) return;
+    if (!name.trim()) {
+      setError("Enter your display name above first.");
+      return;
+    }
+    if (!newGroupName.trim()) {
+      setError("Enter a name for your group first.");
+      return;
+    }
     setCreating(true);
     setError("");
     try {
@@ -182,11 +189,8 @@ export function Groups({ name }: Props) {
               value={newGroupName}
               onChange={(e) => setNewGroupName(e.target.value)}
             />
-            <button
-              disabled={creating || !name.trim() || !newGroupName.trim()}
-              onClick={createGroup}
-            >
-              Create
+            <button disabled={creating} onClick={createGroup}>
+              {creating ? "Creating…" : "Create"}
             </button>
           </div>
           {!name.trim() && (
