@@ -7,6 +7,15 @@ import type { UnoGame } from "./useUnoGame";
 type Group = { id: string; name: string; memberCount: number };
 type PushStatus = "default" | "granted" | "denied" | "unsupported";
 
+function isIosNotInstalled() {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (navigator as unknown as { standalone?: boolean }).standalone === true;
+  return isIos && !isStandalone;
+}
+
 type Props = Pick<UnoGame, "name">;
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -27,9 +36,18 @@ export function Groups({ name }: Props) {
   const [creating, setCreating] = useState(false);
   const [pushStatus, setPushStatus] = useState<PushStatus>("default");
   const [refresh, setRefresh] = useState(0);
+  const [iosNeedsInstall, setIosNeedsInstall] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (isIosNotInstalled()) {
+      // iOS only allows background push notifications for web apps added to
+      // the Home Screen; Notification/PushManager aren't usable from a
+      // regular Safari tab, so guide the user to install first.
+      setIosNeedsInstall(true);
+      setPushStatus("unsupported");
+      return;
+    }
     if (typeof Notification === "undefined" || !("serviceWorker" in navigator))
       setPushStatus("unsupported");
     else setPushStatus(Notification.permission as PushStatus);
@@ -86,7 +104,9 @@ export function Groups({ name }: Props) {
       if (!response.ok) throw new Error(data.error || "Unable to join group.");
       setMine((prev) => new Set(prev).add(groupId));
       setGroups((prev) =>
-        prev.map((g) => (g.id === groupId ? { ...g, memberCount: g.memberCount + 1 } : g)),
+        prev.map((g) =>
+          g.id === groupId ? { ...g, memberCount: g.memberCount + 1 } : g,
+        ),
       );
     } catch (error) {
       setError(error instanceof Error ? error.message : "Unable to join group.");
@@ -177,6 +197,12 @@ export function Groups({ name }: Props) {
             <p className="groups-note">
               Notifications are blocked. Allow them in your browser&apos;s site settings.
             </p>
+          ) : iosNeedsInstall ? (
+            <p className="groups-note">
+              To get notified when the app is closed or in the background, add Uno Club to
+              your Home Screen first: tap Share, then &quot;Add to Home Screen&quot;, and
+              open it from there.
+            </p>
           ) : pushStatus === "unsupported" ? null : (
             <button className="groups-notify" onClick={enableNotifications}>
               <Icon name="info" /> Enable game notifications
@@ -222,7 +248,10 @@ export function Groups({ name }: Props) {
                       {g.memberCount} member{g.memberCount === 1 ? "" : "s"}
                     </span>
                   </div>
-                  <button disabled={busyId === g.id || mine.has(g.id)} onClick={() => join(g.id)}>
+                  <button
+                    disabled={busyId === g.id || mine.has(g.id)}
+                    onClick={() => join(g.id)}
+                  >
                     {mine.has(g.id) ? "Joined" : "Join"}
                   </button>
                 </li>

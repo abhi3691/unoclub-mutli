@@ -12,6 +12,15 @@ export const metadata: Metadata = {
   title: "Uno Club | Your table. Your people.",
   description:
     "Play an Uno-style card game with 2–8 friends, public tables, private room codes, and optional voice chat.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Uno Club",
+  },
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
