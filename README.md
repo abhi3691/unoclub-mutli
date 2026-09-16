@@ -4,7 +4,7 @@ Run `npm run dev -- --hostname 0.0.0.0` for development or `npm run build` follo
 
 ## Multiplayer hosting
 
-Room state lives in Firestore. Create a Firebase project (Firestore Database + Anonymous Authentication enabled), then set these environment variables in Vercel (and locally in `.env`):
+Room state lives in Firestore. Create a Firebase project (Firestore Database + Anonymous Authentication enabled), then set these environment variables in the Elastic Beanstalk environment (and locally in `.env`):
 
 - `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID` — from Firebase Console → Project Settings → Your apps (safe to expose to the browser; access is controlled by Firestore Security Rules, not by hiding these).
 - `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` — a service account key from Project Settings → Service accounts → Generate new private key (server-only, never expose these).
@@ -17,17 +17,29 @@ For local development without a real Firebase project, run the Firestore + Auth 
 
 ## Push notifications
 
-Groups get a browser push when a member schedules a game. This needs VAPID keys, set the same way as the Firebase vars above — in Vercel *and* locally in `.env`:
+Groups get a browser push when a member schedules a game. This needs VAPID keys, set the same way as the Firebase vars above — in the Elastic Beanstalk environment *and* locally in `.env`:
 
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` — generate with `npx web-push generate-vapid-keys`.
 - `VAPID_SUBJECT` — a `mailto:` address for push services to contact if there's an issue.
 - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` — same value as `VAPID_PUBLIC_KEY`, exposed to the browser so it can subscribe.
 
-Since `NEXT_PUBLIC_*` vars are baked into the client bundle at build time, adding them in Vercel only takes effect on the next deploy — if "Enable game notifications" reports "Push notifications aren't configured yet", either these aren't set in Vercel yet, or they were added after the last build and a redeploy is needed. Locally, restart `npm run dev` after editing `.env`.
+Since `NEXT_PUBLIC_*` vars are baked into the client bundle at build time, changing them only takes effect once the Docker image is rebuilt and redeployed (`eb deploy`) — if "Enable game notifications" reports "Push notifications aren't configured yet", either these aren't set in the environment yet, or they were added after the last deploy. Locally, restart `npm run dev` after editing `.env`.
 
 ## Voice
 
 Voice uses browser WebRTC with opt-in microphone permission, individual mute, and authenticated room signaling. HTTPS (or localhost) is required. Google STUN is configured for direct peer discovery. A production TURN relay must be configured for restrictive NAT/firewall networks. Browser-to-browser audio has not been verified across external networks.
+
+## Deployment (AWS Elastic Beanstalk)
+
+The app runs as a Docker container (see `Dockerfile`) on Elastic Beanstalk's Docker platform, which passes environment properties straight into the container at runtime.
+
+The homepage is statically prerendered and initializes the Firebase client SDK at module scope, so `NEXT_PUBLIC_FIREBASE_*` also need to be real values during the Docker *build*, not just at container runtime (the same problem the old Amplify setup worked around by baking env vars into `.env.production` before `npm run build`). `.platform/hooks/prebuild/01_write_build_env.sh` does the EB equivalent automatically: it writes the environment properties configured on the EB environment to `.env.production` right before the image builds, and `next build` picks that file up on its own.
+
+- First-time setup: `eb init` (select the Docker platform and a region), then `eb create <env-name>`.
+- The default EB environment is HTTP-only; voice requires HTTPS, so attach an ACM certificate to the environment's load balancer (Application Load Balancer with an HTTPS listener) after creation.
+- Configure env vars with `eb setenv NEXT_PUBLIC_FIREBASE_API_KEY=... FIREBASE_PRIVATE_KEY=... VAPID_PUBLIC_KEY=... ...` (the full list from `.env.example`, including `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`), or via the console under Configuration → Software.
+- Deploy with `eb deploy`; open the environment with `eb open`.
+- Test the image locally first: copy the relevant vars from `.env` into a local `.env.production` (mimicking what the prebuild hook does), then `docker build -t uno-online .` and `docker run -p 8080:80 --env-file .env uno-online`, and check `http://localhost:8080`.
 
 ## Rules
 

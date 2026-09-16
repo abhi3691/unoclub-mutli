@@ -1,0 +1,24 @@
+node_modules
+.next
+.git
+.vercel
+.elasticbeanstalk
+.env
+.env.local
+.env.development
+.env.test
+!.env.example
+# .env.production is intentionally NOT excluded: the EB prebuild hook
+# (.platform/hooks/prebuild/01_write_build_env.sh) generates it just before
+# `docker build` runs, and `next build` needs it in the build context.
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebase
+coverage
+test-results
+playwright-report
+README.md

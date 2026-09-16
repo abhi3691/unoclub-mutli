@@ -38,6 +38,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# elastic beanstalk
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
